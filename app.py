@@ -28,6 +28,18 @@ app = Flask(__name__,
             static_folder='.',
             static_url_path='/static')
 app.secret_key = "catalogo-relojes-2026"
+
+def short_brand(name):
+    """Acorta nombres largos: 'Tiempo de Relojes (Casio)' -> 'Casio'"""
+    if not name:
+        return name
+    import re
+    m = re.match(r'^Tiempo de Relojes\s*\((.+)\)$', name)
+    if m:
+        return m.group(1)
+    return name
+
+app.jinja_env.filters['short_brand'] = short_brand
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 db.init_db()
 
