@@ -78,15 +78,21 @@ def _resolve_logo(theme):
 
 
 def _download_image(url):
-    """Descarga una imagen remota y retorna la ruta temporal."""
+    """Descarga una imagen remota y retorna la ruta temporal. Usa cache para no re-descargar."""
+    import hashlib
+    # Cache: si ya se descargó, reusar
+    cache_dir = config.BASE_DIR / "_img_cache"
+    cache_dir.mkdir(exist_ok=True)
+    url_hash = hashlib.md5(url.encode()).hexdigest()
+    cached = cache_dir / f"{url_hash}.jpg"
+    if cached.exists():
+        return str(cached)
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=8) as resp:
             data = resp.read()
-        tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
-        tmp.write(data)
-        tmp.close()
-        return tmp.name
+        cached.write_bytes(data)
+        return str(cached)
     except Exception:
         return None
 
@@ -116,6 +122,8 @@ class CatalogBuilder:
         self._setup_fonts()
         self.c = canvas.Canvas(self.out_path, pagesize=self.size)
         self.c.setTitle(safe(f"{theme.get('store_name', '')} - {self.title}"))
+        self._imgs_downloaded = 0
+        self._max_download = 60  # máx imágenes remotas a descargar por PDF
 
     # --- fuentes ------------------------------------------------------------
     def _setup_fonts(self):
@@ -256,16 +264,18 @@ class CatalogBuilder:
 
         img_h = h * 0.46
         drawn = False
-        for rel in p["images"][:1]:
-            # Intentar URL remota primero, luego archivo local
-            img_path = _resolve_image(rel)
-            if not img_path:
-                # Buscar en IMAGES_DIR como fallback
-                local = config.IMAGES_DIR / rel
-                if local.exists():
-                    img_path = str(local)
-            if img_path:
-                drawn = self._image(img_path, x + pad, y + h - pad - img_h, w - 2 * pad, img_h)
+        # Solo descargar si no excedimos el límite de imágenes descargables
+        if self._imgs_downloaded < self._max_download:
+            for rel in p["images"][:1]:
+                img_path = _resolve_image(rel)
+                if not img_path:
+                    local = config.IMAGES_DIR / rel
+                    if local.exists():
+                        img_path = str(local)
+                if img_path:
+                    drawn = self._image(img_path, x + pad, y + h - pad - img_h, w - 2 * pad, img_h)
+                    if drawn and (img_path.startswith("http") or "_img_cache" in img_path):
+                        self._imgs_downloaded += 1
         if not drawn:
             c.setFillColor(self.col["muted"])
             c.setFont(self.font, 8)
