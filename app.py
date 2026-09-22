@@ -179,14 +179,20 @@ def eliminar_marca():
 
 @app.route("/pdf", methods=["POST"])
 def pdf():
-    brands = request.form.getlist("brands")
-    products = [p for p in db.query_products(status="active") if not brands or p["brand"] in brands]
-    if not products:
-        flash("No hay productos activos para el PDF.", "warn")
+    try:
+        brands = request.form.getlist("brands")
+        products = [p for p in db.query_products(status="active") if not brands or p["brand"] in brands]
+        if not products:
+            flash("No hay productos activos para el PDF.", "warn")
+            return back()
+        path = build_pdf(products, show_prices=bool(request.form.get("show_prices")))
+        return send_file(path, mimetype="application/pdf",
+                         as_attachment=request.form.get("mode") == "download")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        flash(f"Error generando el PDF: {e}", "error")
         return back()
-    path = build_pdf(products, show_prices=bool(request.form.get("show_prices")))
-    return send_file(path, mimetype="application/pdf",
-                     as_attachment=request.form.get("mode") == "download")
 
 
 @app.route("/exportar.csv")
