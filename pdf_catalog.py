@@ -125,9 +125,6 @@ class CatalogBuilder:
         self._setup_fonts()
         self.c = canvas.Canvas(self.out_path, pagesize=self.size)
         self.c.setTitle(safe(f"{theme.get('store_name', '')} - {self.title}"))
-        self._imgs_downloaded = 0
-        self._max_download = 50  # máx imágenes remotas a descargar por PDF
-        self._img_timeout_total = 150  # máx 150 segundos total para descargar imágenes
 
     # --- fuentes ------------------------------------------------------------
     def _setup_fonts(self):
@@ -345,22 +342,13 @@ class CatalogBuilder:
         img_h = h * 0.46
         drawn = False
         images = p.get("images") or []
-        # Descargar imágenes (locales y remotas) con límite
-        if self._imgs_downloaded < self._max_download:
-            for rel in images[:1]:
-                img_path = None
-                if rel.startswith("http"):
-                    # Imagen remota: descargar con timeout corto
-                    img_path = _download_image(rel)
-                else:
-                    # Imagen local
-                    local = config.IMAGES_DIR / rel
-                    if local.exists():
-                        img_path = str(local)
-                if img_path:
-                    drawn = self._image(img_path, x + pad, y + h - pad - img_h, w - 2 * pad, img_h)
+        # Solo imágenes locales (archivos en disco del servidor)
+        for rel in images[:1]:
+            if not rel.startswith("http"):
+                local = config.IMAGES_DIR / rel
+                if local.exists():
+                    drawn = self._image(str(local), x + pad, y + h - pad - img_h, w - 2 * pad, img_h)
                     if drawn:
-                        self._imgs_downloaded += 1
                         break
         if not drawn:
             c.setFillColor(self.col["muted"])
@@ -411,14 +399,12 @@ class CatalogBuilder:
 
     # --- armado -------------------------------------------------------------------
     def build(self):
-        import time
         t = self.theme
         cols, rows = int(t.get("columns", 2)), int(t.get("rows", 3))
         m, gap, top, bottom = 34, 12, 62, 38
         cw = (self.W - 2 * m - gap * (cols - 1)) / cols
         ch = (self.H - top - bottom - gap * (rows - 1)) / rows
         per_page = cols * rows
-        start_time = time.time()
 
         self.cover()
         groups = {}
@@ -428,17 +414,12 @@ class CatalogBuilder:
 
         for brand in order:
             items = sorted(groups[brand], key=self._sort_key)
-            # Sin divider — ir directo a productos
             for start in range(0, len(items), per_page):
                 self.header_footer(brand)
                 for i, p in enumerate(items[start:start + per_page]):
                     r, cidx = divmod(i, cols)
                     x = m + cidx * (cw + gap)
                     y = self.H - top - (r + 1) * ch - r * gap
-                    # Saltar descarga de imágenes si se pasó del tiempo
-                    elapsed = time.time() - start_time
-                    if elapsed > self._img_timeout_total:
-                        self._imgs_downloaded = self._max_download  # forzar a no descargar más
                     try:
                         self.card(x, y, cw, ch, p)
                     except Exception:
@@ -447,7 +428,7 @@ class CatalogBuilder:
                         c.rect(x, y, cw, ch, stroke=0, fill=1)
                         c.setFillColor(self.col.get("muted", HexColor("#888888")))
                         c.setFont(self.font, 8)
-                        c.drawCentredString(x + cw/2, y + ch/2, "Error en producto")
+                        c.drawCentredString(x + cw/2, y + ch/2, "Error")
                 self.c.showPage()
                 self.page_no += 1
         self.c.save()
