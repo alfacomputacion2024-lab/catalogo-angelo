@@ -4,6 +4,8 @@ Todo el diseño (colores, textos, columnas, fuentes, logo) sale de theme.json.
 """
 import datetime
 import json
+import urllib.request
+import tempfile
 from pathlib import Path
 
 from reportlab.lib.colors import HexColor
@@ -58,6 +60,48 @@ def fit_text(c, text, font, size, max_w, conv=safe):
     return text + "..."
 
 
+def _resolve_logo(theme):
+    """Busca el logo en rutas absolutas y relativas."""
+    logo = theme.get("logo", "")
+    if not logo:
+        return None
+    # Intentar ruta absoluta desde BASE_DIR
+    for candidate in [
+        config.BASE_DIR / logo,
+        config.BASE_DIR / "logo.PNG",
+        config.BASE_DIR / "logo.png",
+        Path(logo),
+    ]:
+        if candidate.exists():
+            return str(candidate)
+    return None
+
+
+def _download_image(url):
+    """Descarga una imagen remota y retorna la ruta temporal."""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = resp.read()
+        tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+        tmp.write(data)
+        tmp.close()
+        return tmp.name
+    except Exception:
+        return None
+
+
+def _resolve_image(path_or_url):
+    """Resuelve una imagen: si es URL la descarga, si es archivo local retorna la ruta."""
+    s = str(path_or_url)
+    if s.startswith("http://") or s.startswith("https://"):
+        return _download_image(s)
+    p = Path(s)
+    if p.exists():
+        return str(p)
+    return None
+
+
 class CatalogBuilder:
     def __init__(self, out_path, theme, products, show_prices=None, title=None):
         self.theme = theme
@@ -100,10 +144,10 @@ class CatalogBuilder:
         c.rect(0, 0, self.W, self.H, stroke=0, fill=1)
 
         # Logo centrado arriba
-        logo = t.get("logo")
-        if logo and Path(logo).exists():
+        logo_path = _resolve_logo(t)
+        if logo_path:
             logo_w, logo_h = 200, 100
-            self._image(logo, (self.W - logo_w) / 2, self.H * 0.72, logo_w, logo_h, align="center")
+            self._image(logo_path, (self.W - logo_w) / 2, self.H * 0.72, logo_w, logo_h, align="center")
 
         # Linea decorativa centrada
         c.setFillColor(self.col["accent"])
@@ -147,18 +191,22 @@ class CatalogBuilder:
         c.rect(0, 0, self.W, self.H, stroke=0, fill=1)
 
         # Logo centrado arriba
-        logo = self.theme.get("logo")
-        if logo and Path(logo).exists():
-            self._image(logo, (self.W - 140) / 2, self.H * 0.65, 140, 70, align="center")
+        logo_path = _resolve_logo(self.theme)
+        if logo_path:
+            self._image(logo_path, (self.W - 140) / 2, self.H * 0.65, 140, 70, align="center")
 
         # Linea decorativa centrada
         c.setFillColor(self.col["accent"])
         c.rect((self.W - 60) / 2, self.H * 0.62, 60, 4, stroke=0, fill=1)
 
-        # Marca centrada
+        # Marca centrada (truncada si es muy larga)
         c.setFillColor(self.col["cover_text"])
         c.setFont(self.bold, 38)
-        c.drawCentredString(self.W / 2, self.H * 0.50, self.s(brand.upper()))
+        brand_text = self.s(brand.upper())
+        # Truncar si es muy larga (máx 40 chars para divider)
+        if len(brand_text) > 40:
+            brand_text = brand_text[:37] + "..."
+        c.drawCentredString(self.W / 2, self.H * 0.50, brand_text)
 
         # Cantidad centrada
         c.setFont(self.font, 14)
@@ -175,7 +223,9 @@ class CatalogBuilder:
         c.rect(0, self.H - 42, self.W, 42, stroke=0, fill=1)
         c.setFillColor(self.col["cover_text"])
         c.setFont(self.bold, 11)
-        c.drawString(m, self.H - 26, self.s(brand.upper()))
+        # Truncar nombre de marca si es muy largo
+        brand_display = fit_text(c, brand.upper(), self.bold, 11, self.W * 0.55)
+        c.drawString(m, self.H - 26, self.s(brand_display))
         c.setFont(self.font, 9)
         c.drawRightString(self.W - m, self.H - 26, self.s(self.theme.get("store_name", "")))
         c.setFillColor(self.col["accent"])
@@ -207,9 +257,15 @@ class CatalogBuilder:
         img_h = h * 0.46
         drawn = False
         for rel in p["images"][:1]:
-            path = config.IMAGES_DIR / rel
-            if path.exists():
-                drawn = self._image(path, x + pad, y + h - pad - img_h, w - 2 * pad, img_h)
+            # Intentar URL remota primero, luego archivo local
+            img_path = _resolve_image(rel)
+            if not img_path:
+                # Buscar en IMAGES_DIR como fallback
+                local = config.IMAGES_DIR / rel
+                if local.exists():
+                    img_path = str(local)
+            if img_path:
+                drawn = self._image(img_path, x + pad, y + h - pad - img_h, w - 2 * pad, img_h)
         if not drawn:
             c.setFillColor(self.col["muted"])
             c.setFont(self.font, 8)
