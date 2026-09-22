@@ -1,0 +1,39 @@
+{
+  "store_name": "ANGELO",
+  "tagline": "Relojes · Joyería · Accesorios",
+  "cover_note": "Colección 2026",
+  "contact_lines": [
+    "WhatsApp: +595 000 000 000",
+    "Instagram: @angela.py",
+    "Encarnación 6000, c/ Cerro Cora"
+  ],
+  "logo": "logo.png",
+
+  "colors": {
+    "primary": "#1A1A1A",
+    "accent": "#E8A800",
+    "accent_secondary": "#FF6B00",
+    "text": "#1F2937",
+    "muted": "#6B7280",
+    "background": "#FFFFFF",
+    "card": "#F5F5F4",
+    "cover_bg": "#0A0A0A",
+    "cover_text": "#E8A800"
+  },
+
+  "font": "Helvetica",
+  "font_bold": "Helvetica-Bold",
+  "font_file": "",
+  "font_bold_file": "",
+
+  "page_size": "A4",
+  "columns": 2,
+  "rows": 3,
+  "brand_dividers": true,
+  "specs_per_card": 3,
+  "show_prices": true,
+  "price_field": "sell_price",
+  "currency_symbol": "Gs.",
+  "price_decimals": 0,
+  "price_note": "Precios sujetos a cambios sin previo aviso. Stock sujeto a disponibilidad."
+}
