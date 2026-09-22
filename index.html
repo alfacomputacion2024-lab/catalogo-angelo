@@ -76,26 +76,6 @@
     </form>
   </details>
 
-  <details>
-    <summary>3) Generar PDF</summary>
-    <form method="post" action="{{ url_for('pdf') }}" target="_blank" style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;padding:12px">
-      <div style="display:flex;flex-direction:column;gap:4px">
-        <label style="font-weight:600;font-size:13px">Marcas a incluir:</label>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;max-width:600px">
-          {% for b in brands %}
-          <label style="display:flex;align-items:center;gap:3px;background:#2a2a2a;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid #444">
-            <input type="checkbox" name="brands" value="{{ b }}" style="accent-color:var(--acc)"> {{ b|short_brand }}
-          </label>
-          {% endfor %}
-        </div>
-        <span style="font-size:11px;color:#888">Si no marcás ninguna, se genera con todas</span>
-      </div>
-      <label style="flex-direction:row;align-items:center;gap:6px;font-size:13px"><input type="checkbox" name="show_prices" checked> Mostrar precios</label>
-      <button class="primary" name="mode" value="preview">Vista previa</button>
-      <button name="mode" value="download">Descargar PDF</button>
-    </form>
-  </details>
-
   <form method="post" id="main">
     <input type="hidden" name="back" value="{{ back }}">
     <div class="toolbar">
@@ -127,6 +107,25 @@
     {% endfor %}
     </div>
   </form>
+
+  <details>
+    <summary>3) Generar PDF</summary>
+    <form method="post" action="{{ url_for('pdf') }}" target="_blank" style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;padding:12px">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <label style="font-weight:600;font-size:13px">Marcas a incluir:</label>
+        <select name="brands" multiple style="min-height:80px;padding:6px;border-radius:6px;font:inherit;background:#fff">
+          {% for b in brands %}
+          <option value="{{ b }}">{{ b|short_brand }}</option>
+          {% endfor %}
+        </select>
+        <span style="font-size:11px;color:#888">Mantené Ctrl para seleccionar varias. Si no seleccionás ninguna, se genera con todas.</span>
+      </div>
+      <label style="flex-direction:row;align-items:center;gap:6px;font-size:13px"><input type="checkbox" name="show_prices" checked> Mostrar precios</label>
+      <button class="primary" name="mode" value="preview">Vista previa</button>
+      <button name="mode" value="download">Descargar PDF</button>
+    </form>
+  </details>
+
 </main>
 <script>
   const boxes = () => document.querySelectorAll('input.chk');
