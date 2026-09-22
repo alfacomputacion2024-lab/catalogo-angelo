@@ -164,19 +164,20 @@ class CatalogBuilder:
         c.rect(self.W*0.30, 48, self.W*0.40, 1.5, stroke=0, fill=1)
 
         # Pequeños detalles decorativos (diamantes)
+        c.setFillColor(self.col["accent"])
         for dx in [-1, 1]:
             cx = self.W/2 + dx * (self.W * 0.22)
-            c.setFillColor(self.col["accent"])
-            c.saveState()
-            c.translate(cx, self.H - 50)
-            c.rotate(45)
-            c.rect(-3, -3, 6, 6, stroke=0, fill=1)
-            c.restoreState()
-            c.saveState()
-            c.translate(cx, 48)
-            c.rotate(45)
-            c.rect(-3, -3, 6, 6, stroke=0, fill=1)
-            c.restoreState()
+            # Diamante como rectángulo rotado (usando 4 triángulos)
+            s = 4
+            pts = [(cx, self.H - 50 + s), (cx + s, self.H - 50), (cx, self.H - 50 - s), (cx - s, self.H - 50)]
+            c.setStrokeColor(self.col["accent"])
+            c.setLineWidth(1)
+            path = c.beginPath()
+            path.moveTo(*pts[0])
+            for px, py in pts[1:]:
+                path.lineTo(px, py)
+            path.close()
+            c.drawPath(path, stroke=1, fill=0)
 
         # Logo centrado arriba
         logo_path = _resolve_logo(t)
@@ -221,7 +222,7 @@ class CatalogBuilder:
         self.page_no += 1
 
     def _draw_watermark(self, x, y):
-        """Dibuja el logo A como marca de agua difuminada."""
+        """Dibuja el logo A como marca de agua."""
         mark = self.theme.get("logo_mark", "")
         if not mark:
             return
@@ -229,16 +230,6 @@ class CatalogBuilder:
                           config.BASE_DIR / "logo_A.PNG"]:
             if candidate.exists():
                 try:
-                    img = ImageReader(str(candidate))
-                    # Dibujar con transparencia (simulada con color tenue)
-                    c = self.c
-                    c.saveState()
-                    # Fondo oscuro semitransparente detrás del logo
-                    c.setFillColor(HexColor("#1a1a1a"))
-                    c.setFillAlpha(0.7)
-                    c.rect(x - 20, y - 5, 48, 48, stroke=0, fill=1)
-                    c.restoreState()
-                    # Logo pequeño
                     self._image(str(candidate), x - 15, y, 40, 35, align="center")
                     return
                 except Exception:
