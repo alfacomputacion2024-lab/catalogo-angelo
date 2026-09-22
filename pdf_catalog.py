@@ -91,7 +91,7 @@ def _download_image(url):
         return str(cached)
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=8) as resp:
+        with urllib.request.urlopen(req, timeout=5) as resp:
             data = resp.read()
         cached.write_bytes(data)
         return str(cached)
@@ -125,7 +125,8 @@ class CatalogBuilder:
         self.c = canvas.Canvas(self.out_path, pagesize=self.size)
         self.c.setTitle(safe(f"{theme.get('store_name', '')} - {self.title}"))
         self._imgs_downloaded = 0
-        self._max_download = 60  # máx imágenes remotas a descargar por PDF
+        self._max_download = 40  # máx imágenes remotas a descargar por PDF
+        self._img_timeout_total = 120  # máx 120 segundos total para descargar imágenes
 
     # --- fuentes ------------------------------------------------------------
     def _setup_fonts(self):
@@ -378,12 +379,14 @@ class CatalogBuilder:
 
     # --- armado -------------------------------------------------------------------
     def build(self):
+        import time
         t = self.theme
         cols, rows = int(t.get("columns", 2)), int(t.get("rows", 3))
         m, gap, top, bottom = 34, 12, 62, 38
         cw = (self.W - 2 * m - gap * (cols - 1)) / cols
         ch = (self.H - top - bottom - gap * (rows - 1)) / rows
         per_page = cols * rows
+        start_time = time.time()
 
         self.cover()
         groups = {}
@@ -403,10 +406,13 @@ class CatalogBuilder:
                     r, cidx = divmod(i, cols)
                     x = m + cidx * (cw + gap)
                     y = self.H - top - (r + 1) * ch - r * gap
+                    # Saltar descarga de imágenes si se pasó del tiempo
+                    elapsed = time.time() - start_time
+                    if elapsed > self._img_timeout_total:
+                        self._imgs_downloaded = self._max_download  # forzar a no descargar más
                     try:
                         self.card(x, y, cw, ch, p)
                     except Exception:
-                        # Si la tarjeta falla, dibujar vacía
                         c = self.c
                         c.setFillColor(HexColor("#333333"))
                         c.rect(x, y, cw, ch, stroke=0, fill=1)
