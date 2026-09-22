@@ -40,14 +40,14 @@
 <header>
   <h1>Catálogo de relojes · Revisión</h1>
   <span class="n"><b>{{ n_active }}</b> activos · {{ n_deleted }} eliminados</span>
-  <span class="n">{% for b, v in by_brand.items() %}<span class="pill">{{ b }}: {{ v.active }}</span>{% endfor %}</span>
+  <span class="n">{% for b, v in by_brand.items() %}<span class="pill">{{ b|short_brand }}: {{ v.active }}</span>{% endfor %}</span>
   <a href="{{ url_for('exportar') }}">Exportar CSV (tienda online)</a>
 </header>
 <main>
   {% for cat, msg in get_flashed_messages(with_categories=true) %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
 
   <form class="filters" method="get">
-    <label>Marca<select name="brand"><option value="">Todas</option>{% for b in brands %}<option {{ 'selected' if f.brand==b }}>{{ b }}</option>{% endfor %}</select></label>
+    <label>Marca<select name="brand"><option value="">Todas</option>{% for b in brands %}<option value="{{ b }}" {{ 'selected' if f.brand==b }}>{{ b|short_brand }}</option>{% endfor %}</select></label>
     <label>Línea<select name="line"><option value="">Todas</option>{% for b in lines %}<option {{ 'selected' if f.line==b }}>{{ b }}</option>{% endfor %}</select></label>
     <label>Género<select name="gender"><option value="">Todos</option>{% for b in genders %}<option {{ 'selected' if f.gender==b }}>{{ b }}</option>{% endfor %}</select></label>
     <label>Buscar<input type="text" name="q" value="{{ f.q }}" placeholder="referencia o nombre"></label>
@@ -64,14 +64,14 @@
       <p style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
         <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="partial"> Coincidencia parcial (GA-2100 conserva todas sus variantes)</label>
         <label style="flex-direction:row;align-items:center;gap:6px">Solo en marca:
-          <select name="brand"><option value="">Todas</option>{% for b in brands %}<option>{{ b }}</option>{% endfor %}</select></label>
+          <select name="brand"><option value="">Todas</option>{% for b in brands %}<option value="{{ b }}">{{ b|short_brand }}</option>{% endfor %}</select></label>
         <button class="danger" onclick="return confirm('Se eliminarán del catálogo todos los productos que NO estén en esta lista. ¿Continuar?')">Conservar solo estas</button>
       </p>
     </form>
     <form method="post" action="{{ url_for('eliminar_marca') }}" style="display:flex;gap:8px;align-items:center">
       <input type="hidden" name="back" value="{{ back }}">
       <span>Quitar una marca completa:</span>
-      <select name="brand">{% for b in brands %}<option>{{ b }}</option>{% endfor %}</select>
+      <select name="brand">{% for b in brands %}<option value="{{ b }}">{{ b|short_brand }}</option>{% endfor %}</select>
       <button class="danger" onclick="return confirm('¿Eliminar TODOS los productos activos de esa marca?')">Eliminar marca</button>
     </form>
   </details>
@@ -84,7 +84,7 @@
         <div style="display:flex;flex-wrap:wrap;gap:4px;max-width:600px">
           {% for b in brands %}
           <label style="display:flex;align-items:center;gap:3px;background:#2a2a2a;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid #444">
-            <input type="checkbox" name="brands" value="{{ b }}" style="accent-color:var(--acc)"> {{ b }}
+            <input type="checkbox" name="brands" value="{{ b }}" style="accent-color:var(--acc)"> {{ b|short_brand }}
           </label>
           {% endfor %}
         </div>
@@ -117,7 +117,7 @@
       <label class="item">
         <input class="chk" type="checkbox" name="ids" value="{{ p.id }}" onchange="count()">
         <div class="pic">{% if p.images %}<img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="">{% else %}<span class="noimg">Sin imagen</span>{% endif %}</div>
-        <div class="brand">{{ p.brand }}</div>
+        <div class="brand">{{ p.brand|short_brand }}</div>
         <div class="ref"><a href="{{ p.url }}" target="_blank" onclick="event.stopPropagation()">{{ p.reference }}</a></div>
         <div class="nm" title="{{ p.description }}">{{ p.name }}</div>
         <div class="tag">{{ p.line }} · {{ p.gender }}</div>
