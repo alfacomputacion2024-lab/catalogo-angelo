@@ -152,129 +152,143 @@ class CatalogBuilder:
         c.setFillColor(self.col["primary"])
         c.rect(0, 0, self.W, self.H, stroke=0, fill=1)
 
-        # Marco decorativo exterior dorado
-        c.setStrokeColor(self.col["accent"])
-        c.setLineWidth(2)
-        margin = 28
-        c.rect(margin, margin, self.W - 2*margin, self.H - 2*margin, stroke=1, fill=0)
+        # Sutil degradado decorativo (rectángulos semi-transparentes)
+        c.setFillColor(HexColor("#222222"))
+        c.rect(0, self.H * 0.35, self.W, self.H * 0.30, stroke=0, fill=1)
+        c.setFillColor(HexColor("#1e1e1e"))
+        c.rect(0, self.H * 0.38, self.W, self.H * 0.24, stroke=0, fill=1)
 
-        # Marco interior fino
-        c.setLineWidth(0.5)
-        m2 = 36
-        c.rect(m2, m2, self.W - 2*m2, self.H - 2*m2, stroke=1, fill=0)
-
-        # Esquinas decorativas (líneas diagonales)
-        c.setLineWidth(1.5)
-        corner = 20
-        for cx, cy, dx, dy in [(margin+2, margin+2, 1, 1), (self.W-margin-2, margin+2, -1, 1),
-                                (margin+2, self.H-margin-2, 1, -1), (self.W-margin-2, self.H-margin-2, -1, -1)]:
-            c.line(cx, cy, cx + corner*dx, cy)
-            c.line(cx, cy, cx, cy + corner*dy)
-
-        # Líneas decorativas superior e inferior
+        # Líneas decorativas finas doradas arriba y abajo
         c.setFillColor(self.col["accent"])
-        c.rect(self.W*0.3, self.H - 60, self.W*0.4, 2, stroke=0, fill=1)
-        c.rect(self.W*0.3, 58, self.W*0.4, 2, stroke=0, fill=1)
+        c.rect(self.W*0.30, self.H - 50, self.W*0.40, 1.5, stroke=0, fill=1)
+        c.rect(self.W*0.30, 48, self.W*0.40, 1.5, stroke=0, fill=1)
+
+        # Pequeños detalles decorativos (diamantes)
+        for dx in [-1, 1]:
+            cx = self.W/2 + dx * (self.W * 0.22)
+            c.setFillColor(self.col["accent"])
+            c.saveState()
+            c.translate(cx, self.H - 50)
+            c.rotate(45)
+            c.rect(-3, -3, 6, 6, stroke=0, fill=1)
+            c.restoreState()
+            c.saveState()
+            c.translate(cx, 48)
+            c.rotate(45)
+            c.rect(-3, -3, 6, 6, stroke=0, fill=1)
+            c.restoreState()
 
         # Logo centrado arriba
         logo_path = _resolve_logo(t)
         if logo_path:
             logo_w, logo_h = 180, 90
-            self._image(logo_path, (self.W - logo_w) / 2, self.H * 0.70, logo_w, logo_h, align="center")
+            self._image(logo_path, (self.W - logo_w) / 2, self.H * 0.68, logo_w, logo_h, align="center")
 
-        # Línea decorativa centrada bajo logo
+        # Línea bajo logo
         c.setFillColor(self.col["accent"])
-        c.rect((self.W - 80) / 2, self.H * 0.68, 80, 3, stroke=0, fill=1)
+        c.rect((self.W - 60) / 2, self.H * 0.66, 60, 2, stroke=0, fill=1)
 
         # Nombre centrado
         c.setFillColor(self.col["cover_text"])
         c.setFont(self.bold, 32)
         store_name = self.s(t.get("store_name", ""))
-        y = self.H * 0.58
+        y = self.H * 0.56
         for line in simpleSplit(store_name, self.bold, 32, self.W * 0.76):
             c.drawCentredString(self.W / 2, y, line)
             y -= 38
 
-        # Tagline centrado
+        # Tagline
         c.setFont(self.font, 14)
         c.setFillColor(self.col["accent"])
         c.drawCentredString(self.W / 2, y - 4, self.s(t.get("tagline", "")))
 
-        # Nota centrada
+        # Nota
         c.setFillColor(self.col["cover_text"])
         c.setFont(self.font, 11)
         c.drawCentredString(self.W / 2, y - 28, self.s(t.get("cover_note", "")))
 
-        # Contacto centrado
+        # Contacto
         c.setFont(self.font, 10)
         yy = self.H * 0.18
         for line in t.get("contact_lines", []):
             c.drawCentredString(self.W / 2, yy, self.s(line))
             yy -= 14
 
-        # Marca registrada abajo derecha (sin fecha)
-        self._draw_registered_mark(self.W - 50, 20)
+        # Logo "A" difuminado como marca de agua (esquina inferior derecha)
+        self._draw_watermark(self.W - 65, 30)
 
         c.showPage()
         self.page_no += 1
 
-    def _draw_registered_mark(self, x, y):
-        """Dibuja el logo A como Marca Registrada."""
+    def _draw_watermark(self, x, y):
+        """Dibuja el logo A como marca de agua difuminada."""
         mark = self.theme.get("logo_mark", "")
-        if mark:
-            for candidate in [self.theme.get("logo_mark"), config.BASE_DIR / mark,
-                              config.BASE_DIR / "logo_A.png", config.BASE_DIR / "logo_A.PNG"]:
-                if candidate and Path(str(candidate)).exists():
-                    self._image(str(candidate), x - 18, y - 2, 36, 28, align="center")
-                    self.c.setFont(self.font, 5)
-                    self.c.setFillColor(self.col["muted"])
-                    self.c.drawCentredString(x, y - 10, "MR")
+        if not mark:
+            return
+        for candidate in [config.BASE_DIR / mark, config.BASE_DIR / "logo_A.png",
+                          config.BASE_DIR / "logo_A.PNG"]:
+            if candidate.exists():
+                try:
+                    img = ImageReader(str(candidate))
+                    # Dibujar con transparencia (simulada con color tenue)
+                    c = self.c
+                    c.saveState()
+                    # Fondo oscuro semitransparente detrás del logo
+                    c.setFillColor(HexColor("#1a1a1a"))
+                    c.setFillAlpha(0.7)
+                    c.rect(x - 20, y - 5, 48, 48, stroke=0, fill=1)
+                    c.restoreState()
+                    # Logo pequeño
+                    self._image(str(candidate), x - 15, y, 40, 35, align="center")
                     return
-        # Fallback: texto TM
-        self.c.setFont(self.font, 8)
-        self.c.setFillColor(self.col["muted"])
-        self.c.drawCentredString(x, y, "MR")
+                except Exception:
+                    return
 
     def divider(self, brand, count):
         c = self.c
         c.setFillColor(self.col["primary"])
         c.rect(0, 0, self.W, self.H, stroke=0, fill=1)
 
-        # Marco decorativo
-        c.setStrokeColor(self.col["accent"])
-        c.setLineWidth(1.5)
-        margin = 30
-        c.rect(margin, margin, self.W - 2*margin, self.H - 2*margin, stroke=1, fill=0)
+        # Bandas decorativas laterales
+        c.setFillColor(self.col["accent"])
+        c.rect(0, self.H * 0.20, 4, self.H * 0.60, stroke=0, fill=1)
+        c.rect(self.W - 4, self.H * 0.20, 4, self.H * 0.60, stroke=0, fill=1)
 
         # Líneas decorativas
         c.setFillColor(self.col["accent"])
-        c.rect(self.W*0.25, self.H - 55, self.W*0.5, 2, stroke=0, fill=1)
-        c.rect(self.W*0.25, 53, self.W*0.5, 2, stroke=0, fill=1)
+        c.rect(self.W*0.25, self.H - 50, self.W*0.50, 1.5, stroke=0, fill=1)
+        c.rect(self.W*0.25, 48, self.W*0.50, 1.5, stroke=0, fill=1)
 
         # Logo centrado arriba
         logo_path = _resolve_logo(self.theme)
         if logo_path:
-            self._image(logo_path, (self.W - 140) / 2, self.H * 0.63, 140, 70, align="center")
+            self._image(logo_path, (self.W - 120) / 2, self.H * 0.62, 120, 60, align="center")
 
-        # Linea decorativa centrada
+        # Línea bajo logo
         c.setFillColor(self.col["accent"])
-        c.rect((self.W - 60) / 2, self.H * 0.60, 60, 3, stroke=0, fill=1)
+        c.rect((self.W - 50) / 2, self.H * 0.59, 50, 2, stroke=0, fill=1)
 
-        # Marca centrada (truncada si es muy larga)
+        # Marca centrada (truncada)
         c.setFillColor(self.col["cover_text"])
-        c.setFont(self.bold, 36)
         brand_text = self.s(brand.upper())
+        # Ajustar tamaño según longitud
+        if len(brand_text) > 30:
+            c.setFont(self.bold, 26)
+        elif len(brand_text) > 20:
+            c.setFont(self.bold, 30)
+        else:
+            c.setFont(self.bold, 36)
         if len(brand_text) > 35:
             brand_text = brand_text[:32] + "..."
-        c.drawCentredString(self.W / 2, self.H * 0.48, brand_text)
+        c.drawCentredString(self.W / 2, self.H * 0.47, brand_text)
 
-        # Cantidad centrada
+        # Cantidad
         c.setFont(self.font, 13)
         c.setFillColor(self.col["accent"])
-        c.drawCentredString(self.W / 2, self.H * 0.43, f"{count} modelos")
+        c.drawCentredString(self.W / 2, self.H * 0.42, f"{count} modelos")
 
-        # Marca registrada
-        self._draw_registered_mark(self.W - 50, 20)
+        # Logo "A" difuminado
+        self._draw_watermark(self.W - 65, 30)
 
         c.showPage()
         self.page_no += 1
@@ -304,8 +318,6 @@ class CatalogBuilder:
         note = self.theme.get("price_note", "") if self.show_prices else ""
         c.drawString(m, 20, self.s(note))
         c.drawRightString(self.W - m, 20, f"{self.page_no + 1}")
-        # Marca registrada en footer
-        self._draw_registered_mark(self.W / 2, 18)
 
     def _image(self, path, x, y, w, h, align="center"):
         try:
