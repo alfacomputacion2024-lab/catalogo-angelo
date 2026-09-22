@@ -14,6 +14,7 @@ if "--demo" in sys.argv:
 import csv
 import io
 import re
+import tempfile
 
 from flask import (Flask, Response, flash, jsonify, redirect, render_template,
                    request, send_file, send_from_directory, session, url_for)
@@ -188,12 +189,16 @@ def eliminar_marca():
 def pdf():
     try:
         brands = request.form.getlist("brands")
-        products = [p for p in db.query_products(status="active") if not brands or p["brand"] in brands]
+        all_products = db.query_products(status="active")
+        products = [p for p in all_products if not brands or p["brand"] in brands]
         if not products:
             flash("No hay productos activos para el PDF.", "warn")
             return back()
         path = build_pdf(products, show_prices=bool(request.form.get("show_prices")))
-        return send_file(path, mimetype="application/pdf",
+        if not path or not os.path.exists(str(path)):
+            flash("Error: no se pudo generar el archivo PDF.", "error")
+            return back()
+        return send_file(str(path), mimetype="application/pdf",
                          as_attachment=request.form.get("mode") == "download")
     except Exception as e:
         import traceback
