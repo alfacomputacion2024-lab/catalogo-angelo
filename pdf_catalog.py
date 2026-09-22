@@ -167,10 +167,13 @@ class CatalogBuilder:
         c.rect(self.W*0.30, 48, self.W*0.40, 1.5, stroke=0, fill=1)
 
         # Logo centrado arriba
-        logo_path = _resolve_logo(t)
-        if logo_path:
-            logo_w, logo_h = 180, 90
-            self._image(logo_path, (self.W - logo_w) / 2, self.H * 0.68, logo_w, logo_h, align="center")
+        try:
+            logo_path = _resolve_logo(t)
+            if logo_path:
+                logo_w, logo_h = 180, 90
+                self._image(logo_path, (self.W - logo_w) / 2, self.H * 0.68, logo_w, logo_h, align="center")
+        except Exception:
+            pass
 
         # Línea bajo logo
         c.setFillColor(self.col["accent"])
@@ -238,9 +241,12 @@ class CatalogBuilder:
         c.rect(self.W*0.25, 48, self.W*0.50, 1.5, stroke=0, fill=1)
 
         # Logo centrado arriba
-        logo_path = _resolve_logo(self.theme)
-        if logo_path:
-            self._image(logo_path, (self.W - 120) / 2, self.H * 0.62, 120, 60, align="center")
+        try:
+            logo_path = _resolve_logo(self.theme)
+            if logo_path:
+                self._image(logo_path, (self.W - 120) / 2, self.H * 0.62, 120, 60, align="center")
+        except Exception:
+            pass
 
         # Línea bajo logo
         c.setFillColor(self.col["accent"])
@@ -318,18 +324,18 @@ class CatalogBuilder:
         img_h = h * 0.46
         drawn = False
         images = p.get("images") or []
-        # Solo descargar si no excedimos el límite de imágenes descargables
+        # Solo descargar imágenes locales (NO remotas) para evitar timeout en Render
         if self._imgs_downloaded < self._max_download:
             for rel in images[:1]:
-                img_path = _resolve_image(rel)
-                if not img_path:
+                # Solo imágenes locales (archivos en disco)
+                if not rel.startswith("http"):
                     local = config.IMAGES_DIR / rel
                     if local.exists():
                         img_path = str(local)
-                if img_path:
-                    drawn = self._image(img_path, x + pad, y + h - pad - img_h, w - 2 * pad, img_h)
-                    if drawn and (img_path.startswith("http") or "_img_cache" in img_path):
-                        self._imgs_downloaded += 1
+                        drawn = self._image(img_path, x + pad, y + h - pad - img_h, w - 2 * pad, img_h)
+                        if drawn:
+                            self._imgs_downloaded += 1
+                            break
         if not drawn:
             c.setFillColor(self.col["muted"])
             c.setFont(self.font, 8)
@@ -426,10 +432,20 @@ class CatalogBuilder:
 
 
 def build_pdf(products, out_path=None, show_prices=None, title=None):
-    config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    import tempfile
+    try:
+        config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
     if out_path is None:
         stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-        out_path = config.OUTPUT_DIR / f"catalogo_{stamp}.pdf"
+        # Intentar en OUTPUT_DIR, fallback a temp
+        try:
+            out_path = config.OUTPUT_DIR / f"catalogo_{stamp}.pdf"
+            # Probar que se puede escribir
+            out_path.touch()
+        except Exception:
+            out_path = Path(tempfile.gettempdir()) / f"catalogo_{stamp}.pdf"
     return CatalogBuilder(out_path, load_theme(), products, show_prices, title).build()
 
 
