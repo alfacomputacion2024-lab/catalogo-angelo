@@ -196,15 +196,13 @@ def pdf():
             return back()
         path = build_pdf(products, show_prices=bool(request.form.get("show_prices")))
         if not path or not os.path.exists(str(path)):
-            flash("Error: no se pudo generar el archivo PDF.", "error")
-            return back()
+            return Response("<h1>Error</h1><p>No se pudo generar el PDF.</p><a href='/'>Volver</a>", mimetype="text/html")
         return send_file(str(path), mimetype="application/pdf",
                          as_attachment=request.form.get("mode") == "download")
     except Exception as e:
         import traceback
         traceback.print_exc()
-        flash(f"Error generando el PDF: {e}", "error")
-        return back()
+        return Response(f"<h1>Error generando PDF</h1><pre>{e}</pre><a href='/'>Volver</a>", mimetype="text/html")
 
 
 @app.route("/exportar.csv")
