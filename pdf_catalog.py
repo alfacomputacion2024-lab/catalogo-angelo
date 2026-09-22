@@ -82,14 +82,15 @@ def _resolve_logo(theme):
 def _download_image(url):
     """Descarga una imagen remota y retorna la ruta temporal. Usa cache para no re-descargar."""
     import hashlib
-    # Cache: si ya se descargó, reusar
-    cache_dir = config.BASE_DIR / "_img_cache"
-    cache_dir.mkdir(exist_ok=True)
-    url_hash = hashlib.md5(url.encode()).hexdigest()
-    cached = cache_dir / f"{url_hash}.jpg"
-    if cached.exists():
-        return str(cached)
+    import tempfile
     try:
+        # Cache en directorio temporal (siempre funciona en Render)
+        cache_dir = Path(tempfile.gettempdir()) / "img_cache"
+        cache_dir.mkdir(exist_ok=True)
+        url_hash = hashlib.md5(url.encode()).hexdigest()
+        cached = cache_dir / f"{url_hash}.jpg"
+        if cached.exists():
+            return str(cached)
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=3) as resp:
             data = resp.read()
