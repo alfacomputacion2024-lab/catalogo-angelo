@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catálogo Online · {{ theme.store_name }}</title>
+<style>
+  :root {
+    --bg: #0f0f0f; --surface: #1a1a1a; --card: #242424; --border: #333;
+    --text: #f0f0f0; --muted: #888; --accent: #E8A800; --accent-dim: #c08800;
+    --danger: #dc2626; --danger-bg: #2a1215; --ok: #22c55e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* --- Header --- */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; position: sticky; top: 0; z-index: 100; }
+  .header-logo { height: 40px; width: auto; }
+  .header h1 { font-size: 20px; font-weight: 700; color: var(--accent); }
+  .header h1 span { color: var(--text); font-weight: 400; }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .header-actions a { color: var(--muted); text-decoration: none; font-size: 13px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; transition: all .2s; }
+  .header-actions a:hover { color: var(--text); border-color: var(--accent); }
+
+  /* --- Brand tabs --- */
+  .tabs { display: flex; gap: 0; padding: 0 24px; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .tab { padding: 12px 20px; font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; transition: all .2s; white-space: nowrap; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab .count { background: var(--border); color: var(--muted); font-size: 11px; padding: 1px 6px; border-radius: 99px; margin-left: 6px; }
+  .tab.active .count { background: var(--accent-dim); color: #fff; }
+
+  /* --- Content --- */
+  .content { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  .brand-section { margin-bottom: 40px; }
+  .brand-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .brand-header h2 { font-size: 18px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
+  .brand-header .count { font-size: 12px; color: var(--muted); }
+
+  /* --- Grid --- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+
+  /* --- Product card --- */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: all .25s; position: relative; }
+  .card:hover { border-color: var(--accent-dim); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+  .card-img { width: 100%; height: 200px; display: flex; align-items: center; justify-content: center; background: #111; overflow: hidden; }
+  .card-img img { max-width: 90%; max-height: 90%; object-fit: contain; }
+  .card-img .no-img { color: var(--muted); font-size: 13px; }
+  .card-body { padding: 14px; }
+  .card-brand { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+  .card-ref { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .card-name { font-size: 12px; color: var(--muted); line-height: 1.3; min-height: 32px; margin-bottom: 6px; }
+  .card-line { font-size: 11px; color: var(--muted); }
+  .card-line span { background: #2a2a2a; padding: 2px 8px; border-radius: 4px; }
+
+  /* --- Card actions --- */
+  .card-actions { display: flex; gap: 6px; padding: 0 14px 14px; }
+  .card-actions button { flex: 1; padding: 7px 0; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; transition: all .2s; }
+  .card-actions .btn-edit:hover { color: var(--accent); border-color: var(--accent); }
+  .card-actions .btn-delete:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-bg); }
+
+  /* --- Modal --- */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; width: 90%; max-width: 440px; }
+  .modal h3 { font-size: 16px; margin-bottom: 16px; color: var(--accent); }
+  .modal label { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; font-size: 12px; color: var(--muted); }
+  .modal input, .modal select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--text); font: inherit; font-size: 14px; }
+  .modal input:focus, .modal select:focus { outline: none; border-color: var(--accent); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+  .modal-actions button { padding: 8px 18px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text); font: inherit; cursor: pointer; transition: all .2s; }
+  .modal-actions .save { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+  .modal-actions .save:hover { background: var(--accent-dim); }
+
+  /* --- Toast --- */
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; font-size: 13px; z-index: 2000; animation: slideIn .3s; }
+  .toast.ok { background: #166534; color: #fff; }
+  .toast.error { background: #991b1b; color: #fff; }
+  @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* --- Empty --- */
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty h3 { font-size: 18px; margin-bottom: 8px; }
+  .empty p { font-size: 13px; }
+  .empty code { background: var(--card); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+
+  /* --- Responsive --- */
+  @media (max-width: 600px) {
+    .header { padding: 12px 16px; }
+    .content { padding: 16px; }
+    .grid { grid-template-columns: 1fr; }
+    .tabs { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <img src="/static/logo.PNG" alt="Angelo" class="header-logo" onerror="this.style.display='none'">
+    <h1>{{ theme.store_name }} <span>· Catálogo Online</span></h1>
+  </div>
+  <div class="header-actions">
+    {% if usuario %}
+      <a href="{{ url_for('agregar') }}">➕ Agregar</a>
+      <span style="color:var(--accent);font-size:13px">👤 {{ usuario.nombre }}</span>
+      <a href="{{ url_for('logout') }}">Salir</a>
+    {% else %}
+      <a href="{{ url_for('login') }}">🔐 Acceder</a>
+    {% endif %}
+    <a href="{{ url_for('index') }}">⚙ Panel</a>
+  </div>
+</div>
+
+<div class="tabs">
+  <a class="tab {{ 'active' if not selected_brand }}" href="{{ url_for('catalogo') }}">Todas<span class="count">{{ by_brand.values()|map('length')|sum }}</span></a>
+  {% for brand in brands %}
+    {% if brand in by_brand %}
+    <a class="tab {{ 'active' if selected_brand==brand }}" href="{{ url_for('catalogo', brand=brand) }}">{{ brand }}<span class="count">{{ by_brand[brand]|length }}</span></a>
+    {% endif %}
+  {% endfor %}
+</div>
+
+<div class="content">
+  {% if not by_brand %}
+    <div class="empty">
+      <h3>No hay productos en el catálogo</h3>
+      <p>Ejecutá el scraper para cargar productos:<br><code>python run_scrape.py --brand tdr_casio --limit 10</code></p>
+    </div>
+  {% endif %}
+
+  {% for brand, products in by_brand.items() %}
+  <div class="brand-section" id="brand-{{ brand|replace(' ','-')|lower }}">
+    <div class="brand-header">
+      <h2>{{ brand }}</h2>
+      <span class="count">{{ products|length }} productos</span>
+    </div>
+    <div class="grid">
+      {% for p in products %}
+      <div class="card" data-id="{{ p.id }}">
+        <div class="card-img">
+          {% if p.images %}
+            {% set img_src = p.images[0] if p.images else '' %}
+            {% if img_src.startswith('http') %}
+              <img loading="lazy" src="{{ img_src }}" alt="{{ p.reference }}">
+            {% else %}
+              <img loading="lazy" src="{{ url_for('img', p=img_src) }}" alt="{{ p.reference }}">
+            {% endif %}
+          {% else %}
+            <span class="no-img">Sin imagen</span>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          <div class="card-brand">{{ p.brand }}</div>
+          <div class="card-ref">{{ p.reference }}</div>
+          <div class="card-name">{{ p.name }}</div>
+          <div class="card-line"><span>{{ p.line or 'Sin línea' }}</span> · {{ p.gender or '' }}</div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-edit" onclick='openEdit({{ p|tojson }})'>✏️ Editar</button>
+          <button class="btn-delete" onclick="deleteProduct({{ p.id }}, '{{ p.reference }}')">🗑️ Eliminar</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Modal Editar -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>✏️ Editar producto</h3>
+    <input type="hidden" id="edit-id">
+    <label>Nombre
+      <input type="text" id="edit-name" placeholder="Nombre del producto">
+    </label>
+    <label>Línea / Ubicación
+      <input type="text" id="edit-line" placeholder="G-Shock, Baby-G, etc.">
+    </label>
+    <label>Género
+      <select id="edit-gender">
+        <option value="">Sin definir</option>
+        <option value="Hombre">Hombre</option>
+        <option value="Dama">Dama</option>
+        <option value="Unisex">Unisex</option>
+      </select>
+    </label>
+    <label>Precio de venta (Gs.)
+      <input type="number" id="edit-sell-price" placeholder="0" step="1000">
+    </label>
+    <div class="modal-actions">
+      <button onclick="closeModal()">Cancelar</button>
+      <button class="save" onclick="saveProduct()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" style="display:none"></div>
+
+<script>
+function openEdit(p) {
+  document.getElementById('edit-id').value = p.id;
+  document.getElementById('edit-name').value = p.name || '';
+  document.getElementById('edit-line').value = p.line || '';
+  document.getElementById('edit-gender').value = p.gender || '';
+  document.getElementById('edit-sell-price').value = p.sell_price || '';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('editModal').classList.remove('open');
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 2500);
+}
+
+async function saveProduct() {
+  const id = document.getElementById('edit-id').value;
+  const data = {
+    name: document.getElementById('edit-name').value,
+    line: document.getElementById('edit-line').value,
+    gender: document.getElementById('edit-gender').value,
+    sell_price: parseFloat(document.getElementById('edit-sell-price').value) || null
+  };
+  const res = await fetch(`/api/producto/${id}`, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  const j = await res.json();
+  if (j.ok) {
+    showToast('✅ Producto actualizado', 'ok');
+    closeModal();
+    setTimeout(() => location.reload(), 500);
+  } else {
+    showToast('❌ ' + (j.error || 'Error'), 'error');
+  }
+}
+
+async function deleteProduct(id, ref) {
+  if (!confirm(`¿Eliminar "${ref}" del catálogo?`)) return;
+  const res = await fetch(`/api/producto/${id}`, { method: 'DELETE' });
+  const j = await res.json();
+  if (j.ok) {
+    showToast('🗑️ ' + ref + ' eliminado', 'ok');
+    const card = document.querySelector(`.card[data-id="${id}"]`);
+    if (card) { card.style.opacity = '0'; card.style.transform = 'scale(.9)'; setTimeout(() => card.remove(), 300); }
+  } else {
+    showToast('❌ ' + (j.error || 'Error'), 'error');
+  }
+}
+
+// Cerrar modal con Escape
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+// Cerrar modal clickeando afuera
+document.getElementById('editModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+</script>
+</body>
+</html>
