@@ -22,7 +22,30 @@ from flask import (Flask, Response, flash, jsonify, redirect, render_template,
 import config
 import db
 from pdf_catalog import build_pdf
-from scraper import parse_price
+
+
+def parse_price(value):
+    """'$1,234.50' / '1.234,50' / 'Gs. 1.500.000' / 1299 -> float."""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    s = re.sub(r"[^\d.,]", "", str(value))
+    if not s:
+        return None
+    if "," in s and "." in s:
+        if s.rfind(",") > s.rfind("."):
+            s = s.replace(".", "").replace(",", ".")
+        else:
+            s = s.replace(",", "")
+    elif "," in s or "." in s:
+        sep = "," if "," in s else "."
+        parts = s.split(sep)
+        s = "".join(parts) if (len(parts) > 2 or len(parts[-1]) == 3) else ".".join(parts)
+    try:
+        return float(s)
+    except (ValueError, TypeError):
+        return None
 
 app = Flask(__name__, 
             template_folder='.',
@@ -185,8 +208,10 @@ def eliminar_marca():
     return back()
 
 
-@app.route("/pdf", methods=["POST"])
+@app.route("/pdf", methods=["GET", "POST"])
 def pdf():
+    if request.method == "GET":
+        return redirect(url_for("index"))
     try:
         brands = request.form.getlist("brands")
         all_products = db.query_products(status="active")
