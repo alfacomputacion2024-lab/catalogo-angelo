@@ -94,8 +94,14 @@ def logout():
 def index():
     f = {k: request.args.get(k, "") for k in ("brand", "line", "gender", "q")}
     status = request.args.get("status", "active")
-    products = db.query_products(brand=f["brand"] or None, line=f["line"] or None,
-                                 gender=f["gender"] or None, q=f["q"] or None, status=status)
+    page = request.args.get("page", 1, type=int)
+    per_page = 50
+    all_products = db.query_products(brand=f["brand"] or None, line=f["line"] or None,
+                                     gender=f["gender"] or None, q=f["q"] or None, status=status)
+    total = len(all_products)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = max(1, min(page, total_pages))
+    products = all_products[(page - 1) * per_page : page * per_page]
     opt_status = status if status in ("active", "deleted") else "active"
     totals = db.stats()
     return render_template(
@@ -106,6 +112,7 @@ def index():
         n_active=sum(v["active"] for v in totals.values()),
         n_deleted=sum(v["deleted"] for v in totals.values()),
         by_brand=totals, back=request.query_string.decode(),
+        page=page, total_pages=total_pages, total=total,
     )
 
 
@@ -214,6 +221,8 @@ def exportar():
 @app.route("/catalogo")
 def catalogo():
     brand = request.args.get("brand", "")
+    page = request.args.get("page", 1, type=int)
+    per_page = 60
     products = db.query_products(status="active")
     brands = db.distinct_values("brand", "active")
     if brand:
@@ -222,9 +231,18 @@ def catalogo():
     by_brand = {}
     for p in products:
         by_brand.setdefault(p["brand"], []).append(p)
-    return render_template("catalogo.html", by_brand=by_brand, brands=brands,
+    # Si no hay marca seleccionada, paginar el total
+    total = len(products)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = max(1, min(page, total_pages))
+    paginated = products[(page - 1) * per_page : page * per_page]
+    by_brand_page = {}
+    for p in paginated:
+        by_brand_page.setdefault(p["brand"], []).append(p)
+    return render_template("catalogo.html", by_brand=by_brand_page, brands=brands,
                            selected_brand=brand, theme=json.loads(config.THEME_PATH.read_text(encoding="utf-8")),
-                           usuario=session.get("usuario"))
+                           usuario=session.get("usuario"),
+                           page=page, total_pages=total_pages, total=total)
 
 
 # =============================================================================
