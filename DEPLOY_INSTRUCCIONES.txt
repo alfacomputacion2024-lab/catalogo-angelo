@@ -1,0 +1,59 @@
+# 🚀 INSTRUCCIONES DE DEPLOY - Render.com
+# ==========================================
+# Seguí estos pasos desde tu casa. Tardás 15 minutos.
+
+## PASO 1: Crear cuenta en GitHub (3 min)
+1. Andá a https://github.com
+2. Click "Sign up"
+3. Creá cuenta con tu email
+4. Verificá el email
+
+## PASO 2: Crear repositorio (2 min)
+1. Andá a https://github.com/new
+2. Nombre: catalogo-angelo
+3. Público o Privado (da igual)
+4. Click "Create repository"
+5. NO toques nada más ahí
+
+## PASO 3: Subir el código (5 min)
+1. Andá a https://github.com/new
+2. Si no ves "uploading an existing file", andá a tu repo y click "uploading an existing file"
+3. Subí TODOS los archivos de esta carpeta:
+   - app.py, config.py, db.py, scraper.py, images.py
+   - pdf_catalog.py, classify.py, run_scrape.py
+   - theme.json, requirements.txt, render.yaml, .gitignore
+   - ver_marcas.py, ver_productos.py, cargar_casajoia.py
+   - README.md
+   - carpeta templates/ (con todos los .html)
+   - carpeta static/ (con logo.PNG)
+   - carpeta data/ (con catalogo.db)
+4. Click "Commit changes"
+
+## PASO 4: Crear cuenta en Render (3 min)
+1. Andá a https://render.com
+2. Click "Get Started for Free"
+3. Registrate con GitHub (botón "GitHub")
+4. Autorizá Render
+
+## PASO 5: Crear el servicio (2 min)
+1. En Render, click "New +" → "Web Service"
+2. Conectá tu repo "catalogo-angelo"
+3. Nombre: catalogo-angelo
+4. Runtime: Python
+5. Build Command: pip install -r requirements.txt
+6. Start Command: gunicorn app:app --bind 0.0.0.0:$PORT
+7. Click "Create Web Service"
+8. Esperá 3-5 minutos
+
+## PASO 6: Listo!
+Tu URL será: https://catalogo-angelo.onrender.com
+Login: admin@mitienda.com.py / admin123
+
+## ⚠️ IMPORTANTE
+- Render gratis se duerme después de 15 min sin uso
+- La primera vez que entrás tarda 30 segundos en despertar
+- Las fotos se cargan desde los proveedores (TDR, AM, Casa Joia)
+- El PDF funciona desde el panel del catálogo
+
+## Si algo sale mal
+Mirá los logs en Render → tu servicio → Logs
