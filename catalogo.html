@@ -116,7 +116,7 @@
   <a class="tab {{ 'active' if not selected_brand }}" href="{{ url_for('catalogo') }}">Todas<span class="count">{{ by_brand.values()|map('length')|sum }}</span></a>
   {% for brand in brands %}
     {% if brand in by_brand %}
-    <a class="tab {{ 'active' if selected_brand==brand }}" href="{{ url_for('catalogo', brand=brand) }}">{{ brand }}<span class="count">{{ by_brand[brand]|length }}</span></a>
+    <a class="tab {{ 'active' if selected_brand==brand }}" href="{{ url_for('catalogo', brand=brand) }}">{{ brand|short_brand }}<span class="count">{{ by_brand[brand]|length }}</span></a>
     {% endif %}
   {% endfor %}
 </div>
@@ -132,7 +132,7 @@
   {% for brand, products in by_brand.items() %}
   <div class="brand-section" id="brand-{{ brand|replace(' ','-')|lower }}">
     <div class="brand-header">
-      <h2>{{ brand }}</h2>
+      <h2>{{ brand|short_brand }}</h2>
       <span class="count">{{ products|length }} productos</span>
     </div>
     <div class="grid">
@@ -151,7 +151,7 @@
           {% endif %}
         </div>
         <div class="card-body">
-          <div class="card-brand">{{ p.brand }}</div>
+          <div class="card-brand">{{ p.brand|short_brand }}</div>
           <div class="card-ref">{{ p.reference }}</div>
           <div class="card-name">{{ p.name }}</div>
           <div class="card-line"><span>{{ p.line or 'Sin línea' }}</span> · {{ p.gender or '' }}</div>
