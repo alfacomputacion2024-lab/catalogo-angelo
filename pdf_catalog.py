@@ -148,37 +148,62 @@ class CatalogBuilder:
     # --- páginas --------------------------------------------------------------
     def cover(self):
         c, t = self.c, self.theme
+        # Fondo principal
         c.setFillColor(self.col["primary"])
         c.rect(0, 0, self.W, self.H, stroke=0, fill=1)
+
+        # Marco decorativo exterior dorado
+        c.setStrokeColor(self.col["accent"])
+        c.setLineWidth(2)
+        margin = 28
+        c.rect(margin, margin, self.W - 2*margin, self.H - 2*margin, stroke=1, fill=0)
+
+        # Marco interior fino
+        c.setLineWidth(0.5)
+        m2 = 36
+        c.rect(m2, m2, self.W - 2*m2, self.H - 2*m2, stroke=1, fill=0)
+
+        # Esquinas decorativas (líneas diagonales)
+        c.setLineWidth(1.5)
+        corner = 20
+        for cx, cy, dx, dy in [(margin+2, margin+2, 1, 1), (self.W-margin-2, margin+2, -1, 1),
+                                (margin+2, self.H-margin-2, 1, -1), (self.W-margin-2, self.H-margin-2, -1, -1)]:
+            c.line(cx, cy, cx + corner*dx, cy)
+            c.line(cx, cy, cx, cy + corner*dy)
+
+        # Líneas decorativas superior e inferior
+        c.setFillColor(self.col["accent"])
+        c.rect(self.W*0.3, self.H - 60, self.W*0.4, 2, stroke=0, fill=1)
+        c.rect(self.W*0.3, 58, self.W*0.4, 2, stroke=0, fill=1)
 
         # Logo centrado arriba
         logo_path = _resolve_logo(t)
         if logo_path:
-            logo_w, logo_h = 200, 100
-            self._image(logo_path, (self.W - logo_w) / 2, self.H * 0.72, logo_w, logo_h, align="center")
+            logo_w, logo_h = 180, 90
+            self._image(logo_path, (self.W - logo_w) / 2, self.H * 0.70, logo_w, logo_h, align="center")
 
-        # Linea decorativa centrada
+        # Línea decorativa centrada bajo logo
         c.setFillColor(self.col["accent"])
-        c.rect((self.W - 60) / 2, self.H * 0.70, 60, 4, stroke=0, fill=1)
+        c.rect((self.W - 80) / 2, self.H * 0.68, 80, 3, stroke=0, fill=1)
 
         # Nombre centrado
         c.setFillColor(self.col["cover_text"])
-        c.setFont(self.bold, 30)
+        c.setFont(self.bold, 32)
         store_name = self.s(t.get("store_name", ""))
-        y = self.H * 0.60
-        for line in simpleSplit(store_name, self.bold, 30, self.W * 0.76):
+        y = self.H * 0.58
+        for line in simpleSplit(store_name, self.bold, 32, self.W * 0.76):
             c.drawCentredString(self.W / 2, y, line)
-            y -= 36
+            y -= 38
 
         # Tagline centrado
-        c.setFont(self.font, 15)
+        c.setFont(self.font, 14)
         c.setFillColor(self.col["accent"])
-        c.drawCentredString(self.W / 2, y - 6, self.s(t.get("tagline", "")))
+        c.drawCentredString(self.W / 2, y - 4, self.s(t.get("tagline", "")))
 
         # Nota centrada
         c.setFillColor(self.col["cover_text"])
         c.setFont(self.font, 11)
-        c.drawCentredString(self.W / 2, y - 30, self.s(t.get("cover_note", "")))
+        c.drawCentredString(self.W / 2, y - 28, self.s(t.get("cover_note", "")))
 
         # Contacto centrado
         c.setFont(self.font, 10)
@@ -187,39 +212,70 @@ class CatalogBuilder:
             c.drawCentredString(self.W / 2, yy, self.s(line))
             yy -= 14
 
-        # Fecha abajo derecha
-        c.drawRightString(self.W * 0.88, self.H * 0.06,
-                          datetime.date.today().strftime("%d/%m/%Y"))
+        # Marca registrada abajo derecha (sin fecha)
+        self._draw_registered_mark(self.W - 50, 20)
+
         c.showPage()
         self.page_no += 1
+
+    def _draw_registered_mark(self, x, y):
+        """Dibuja el logo A como Marca Registrada."""
+        mark = self.theme.get("logo_mark", "")
+        if mark:
+            for candidate in [self.theme.get("logo_mark"), config.BASE_DIR / mark,
+                              config.BASE_DIR / "logo_A.png", config.BASE_DIR / "logo_A.PNG"]:
+                if candidate and Path(str(candidate)).exists():
+                    self._image(str(candidate), x - 18, y - 2, 36, 28, align="center")
+                    self.c.setFont(self.font, 5)
+                    self.c.setFillColor(self.col["muted"])
+                    self.c.drawCentredString(x, y - 10, "MR")
+                    return
+        # Fallback: texto TM
+        self.c.setFont(self.font, 8)
+        self.c.setFillColor(self.col["muted"])
+        self.c.drawCentredString(x, y, "MR")
 
     def divider(self, brand, count):
         c = self.c
         c.setFillColor(self.col["primary"])
         c.rect(0, 0, self.W, self.H, stroke=0, fill=1)
 
+        # Marco decorativo
+        c.setStrokeColor(self.col["accent"])
+        c.setLineWidth(1.5)
+        margin = 30
+        c.rect(margin, margin, self.W - 2*margin, self.H - 2*margin, stroke=1, fill=0)
+
+        # Líneas decorativas
+        c.setFillColor(self.col["accent"])
+        c.rect(self.W*0.25, self.H - 55, self.W*0.5, 2, stroke=0, fill=1)
+        c.rect(self.W*0.25, 53, self.W*0.5, 2, stroke=0, fill=1)
+
         # Logo centrado arriba
         logo_path = _resolve_logo(self.theme)
         if logo_path:
-            self._image(logo_path, (self.W - 140) / 2, self.H * 0.65, 140, 70, align="center")
+            self._image(logo_path, (self.W - 140) / 2, self.H * 0.63, 140, 70, align="center")
 
         # Linea decorativa centrada
         c.setFillColor(self.col["accent"])
-        c.rect((self.W - 60) / 2, self.H * 0.62, 60, 4, stroke=0, fill=1)
+        c.rect((self.W - 60) / 2, self.H * 0.60, 60, 3, stroke=0, fill=1)
 
         # Marca centrada (truncada si es muy larga)
         c.setFillColor(self.col["cover_text"])
-        c.setFont(self.bold, 38)
+        c.setFont(self.bold, 36)
         brand_text = self.s(brand.upper())
-        # Truncar si es muy larga (máx 40 chars para divider)
-        if len(brand_text) > 40:
-            brand_text = brand_text[:37] + "..."
-        c.drawCentredString(self.W / 2, self.H * 0.50, brand_text)
+        if len(brand_text) > 35:
+            brand_text = brand_text[:32] + "..."
+        c.drawCentredString(self.W / 2, self.H * 0.48, brand_text)
 
         # Cantidad centrada
-        c.setFont(self.font, 14)
+        c.setFont(self.font, 13)
         c.setFillColor(self.col["accent"])
-        c.drawCentredString(self.W / 2, self.H * 0.45, f"{count} modelos")
+        c.drawCentredString(self.W / 2, self.H * 0.43, f"{count} modelos")
+
+        # Marca registrada
+        self._draw_registered_mark(self.W - 50, 20)
+
         c.showPage()
         self.page_no += 1
 
@@ -227,22 +283,29 @@ class CatalogBuilder:
         c, m = self.c, 34
         c.setFillColor(self.col["background"])
         c.rect(0, 0, self.W, self.H, stroke=0, fill=1)
+        # Borde sutil
+        c.setStrokeColor(self.col["accent"])
+        c.setLineWidth(0.3)
+        c.rect(20, 14, self.W - 40, self.H - 28, stroke=1, fill=0)
+        # Header
         c.setFillColor(self.col["primary"])
         c.rect(0, self.H - 42, self.W, 42, stroke=0, fill=1)
         c.setFillColor(self.col["cover_text"])
         c.setFont(self.bold, 11)
-        # Truncar nombre de marca si es muy largo
         brand_display = fit_text(c, brand.upper(), self.bold, 11, self.W * 0.55)
         c.drawString(m, self.H - 26, self.s(brand_display))
         c.setFont(self.font, 9)
         c.drawRightString(self.W - m, self.H - 26, self.s(self.theme.get("store_name", "")))
         c.setFillColor(self.col["accent"])
         c.rect(0, self.H - 45, self.W, 3, stroke=0, fill=1)
+        # Footer
         c.setFillColor(self.col["muted"])
         c.setFont(self.font, 7.5)
         note = self.theme.get("price_note", "") if self.show_prices else ""
         c.drawString(m, 20, self.s(note))
         c.drawRightString(self.W - m, 20, f"{self.page_no + 1}")
+        # Marca registrada en footer
+        self._draw_registered_mark(self.W / 2, 18)
 
     def _image(self, path, x, y, w, h, align="center"):
         try:
@@ -339,7 +402,9 @@ class CatalogBuilder:
 
         for brand in order:
             items = sorted(groups[brand], key=self._sort_key)
-            if t.get("brand_dividers", True):
+            # Saltar divider si la marca cabe en una página (optimización)
+            use_divider = t.get("brand_dividers", True) and len(items) > per_page
+            if use_divider:
                 self.divider(brand, len(items))
             for start in range(0, len(items), per_page):
                 self.header_footer(brand)
