@@ -34,6 +34,10 @@
   .price{width:100%} .empty{padding:40px;text-align:center;color:var(--mut)}
   .pill{background:#e5e7eb;border-radius:99px;padding:2px 8px;font-size:12px;margin-right:4px;display:inline-block;white-space:nowrap}
   .n{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+  .pagination{display:flex;justify-content:center;align-items:center;gap:14px;padding:16px 0;flex-wrap:wrap}
+  .pg-btn{background:#111827;color:#fff;padding:8px 16px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;transition:opacity .2s}
+  .pg-btn:hover{opacity:.85}
+  .pg-info{color:#71717a;font-size:13px}
 </style>
 </head>
 <body>
@@ -106,6 +110,25 @@
       </label>
     {% endfor %}
     </div>
+    {% if total_pages > 1 %}
+    <div class="pagination">
+      {% set base = request.path + '?' %}
+      {% set params = [] %}
+      {% for k, v in request.args.items() %}
+        {% if k != 'page' %}
+          {% set _ = params.append(k ~ '=' ~ v) %}
+        {% endif %}
+      {% endfor %}
+      {% set qs = params|join('&') %}
+      {% if page > 1 %}
+      <a class="pg-btn" href="{{ base }}{{ qs ~ '&' if qs else '' }}page={{ page - 1 }}">« Anterior</a>
+      {% endif %}
+      <span class="pg-info">Página {{ page }} de {{ total_pages }} ({{ total }} productos)</span>
+      {% if page < total_pages %}
+      <a class="pg-btn" href="{{ base }}{{ qs ~ '&' if qs else '' }}page={{ page + 1 }}">Siguiente »</a>
+      {% endif %}
+    </div>
+    {% endif %}
   </form>
 
   <details>
