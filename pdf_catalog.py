@@ -1,12 +1,14 @@
 """
 Generador del PDF del catálogo (ReportLab).
-Todo el diseño (colores, textos, columnas, fuentes, logo) sale de theme.json.
+Optimizado para Render.com free tier (512MB RAM, 60s timeout).
 """
 import datetime
+import hashlib
 import json
-import urllib.request
 import tempfile
+import urllib.request
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from reportlab.lib.colors import HexColor
 from reportlab.lib.pagesizes import A4, LETTER
@@ -16,6 +18,9 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 import config
+
+# Límite máximo de productos para evitar crash de memoria en Render
+MAX_PRODUCTS_FOR_PDF = 300
 
 # Especificaciones que se prefieren mostrar en cada tarjeta (por orden de importancia)
 SPEC_PRIORITY = ["resistencia", "water", "agua", "diametro", "diámetro", "caja", "case", "size",
@@ -79,25 +84,41 @@ def _resolve_logo(theme):
     return None
 
 
-def _download_image(url):
-    """Descarga una imagen remota y retorna la ruta temporal. Usa cache para no re-descargar."""
+def _download_image(url, timeout=5):
+    """Descarga una imagen remota con cache en disco. Timeout corto para Render."""
     import hashlib
-    import tempfile
     try:
-        # Cache en directorio temporal (siempre funciona en Render)
         cache_dir = Path(tempfile.gettempdir()) / "img_cache"
         cache_dir.mkdir(exist_ok=True)
         url_hash = hashlib.md5(url.encode()).hexdigest()
         cached = cache_dir / f"{url_hash}.jpg"
-        if cached.exists():
+        if cached.exists() and cached.stat().st_size > 100:
             return str(cached)
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            data = resp.read()
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = resp.read(500_000)  # Max 500KB por imagen
+        if len(data) < 100:
+            return None
         cached.write_bytes(data)
         return str(cached)
     except Exception:
         return None
+
+
+def _download_images_batch(urls, max_workers=4, timeout=5):
+    """Descarga múltiples imágenes en paralelo (más rápido)."""
+    results = {}
+    def _dl(url):
+        return url, _download_image(url, timeout)
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {pool.submit(_dl, u): u for u in urls if u}
+        for f in as_completed(futures, timeout=15):
+            try:
+                url, path = f.result()
+                results[url] = path
+            except Exception:
+                pass
+    return results
 
 
 def _resolve_image(path_or_url):
@@ -342,7 +363,8 @@ class CatalogBuilder:
         img_h = h * 0.46
         drawn = False
         images = p.get("images") or []
-        # Solo imágenes locales (archivos en disco del servidor)
+        
+        # 1) Intentar imagen local primero
         for rel in images[:1]:
             if not rel.startswith("http"):
                 local = config.IMAGES_DIR / rel
@@ -350,6 +372,20 @@ class CatalogBuilder:
                     drawn = self._image(str(local), x + pad, y + h - pad - img_h, w - 2 * pad, img_h)
                     if drawn:
                         break
+        
+        # 2) Si no hay local, usar cache de descarga previa
+        if not drawn:
+            for img_ref in images[:1]:
+                if img_ref.startswith("http"):
+                    # Usar cache si ya se descargó antes
+                    cached = getattr(self, '_image_cache', {}).get(img_ref)
+                    if not cached:
+                        cached = _download_image(img_ref, timeout=5)
+                    if cached:
+                        drawn = self._image(cached, x + pad, y + h - pad - img_h, w - 2 * pad, img_h)
+                        if drawn:
+                            break
+        
         if not drawn:
             c.setFillColor(self.col["muted"])
             c.setFont(self.font, 8)
@@ -412,6 +448,17 @@ class CatalogBuilder:
             groups.setdefault(p.get("brand", "Sin marca"), []).append(p)
         order = [b for b in config.BRAND_ORDER if b in groups] + [b for b in groups if b not in config.BRAND_ORDER]
 
+        # Pre-descargar imágenes remotas en lote (más eficiente que una por una)
+        all_img_urls = set()
+        for p in self.products:
+            for img in (p.get("images") or [])[:1]:
+                if img.startswith("http"):
+                    all_img_urls.add(img)
+        if all_img_urls:
+            self._image_cache = _download_images_batch(list(all_img_urls)[:50], max_workers=3, timeout=5)
+        else:
+            self._image_cache = {}
+
         for brand in order:
             items = sorted(groups[brand], key=self._sort_key)
             for start in range(0, len(items), per_page):
@@ -436,20 +483,27 @@ class CatalogBuilder:
 
 
 def build_pdf(products, out_path=None, show_prices=None, title=None):
+    """Genera PDF. Limita productos para evitar crash en Render free tier."""
     import tempfile
+    
+    # Límite de productos para Render free tier (512MB RAM)
+    if len(products) > MAX_PRODUCTS_FOR_PDF:
+        products = products[:MAX_PRODUCTS_FOR_PDF]
+    
     try:
         config.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     except Exception:
         pass
+    
     if out_path is None:
         stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
         # Intentar en OUTPUT_DIR, fallback a temp
         try:
             out_path = config.OUTPUT_DIR / f"catalogo_{stamp}.pdf"
-            # Probar que se puede escribir
             out_path.touch()
         except Exception:
             out_path = Path(tempfile.gettempdir()) / f"catalogo_{stamp}.pdf"
+    
     return CatalogBuilder(out_path, load_theme(), products, show_prices, title).build()
 
 

@@ -3,7 +3,9 @@ services:
     name: catalogo-angelo
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --threads 2
     envVars:
       - key: CATALOGO_DATA_DIR
         value: data
+      - key: PYTHONUNBUFFERED
+        value: 1

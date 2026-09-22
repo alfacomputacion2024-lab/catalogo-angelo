@@ -57,7 +57,6 @@ def short_brand(name):
     """Acorta nombres largos: 'Tiempo de Relojes (Casio)' -> 'Casio'"""
     if not name:
         return name
-    import re
     m = re.match(r'^Tiempo de Relojes\s*\((.+)\)$', name)
     if m:
         return m.group(1)
@@ -219,7 +218,17 @@ def pdf():
         if not products:
             flash("No hay productos activos para el PDF.", "warn")
             return back()
+        
+        # Limitar productos para evitar crash en Render
+        from pdf_catalog import MAX_PRODUCTS_FOR_PDF
+        if len(products) > MAX_PRODUCTS_FOR_PDF:
+            flash(f"⚠️ Limitado a {MAX_PRODUCTS_FOR_PDF} productos para evitar timeout. Seleccioná marcas específicas.", "warn")
+            products = products[:MAX_PRODUCTS_FOR_PDF]
+        
+        print(f"[PDF] Generando PDF con {len(products)} productos...")
         path = build_pdf(products, show_prices=bool(request.form.get("show_prices")))
+        print(f"[PDF] PDF generado: {path}")
+        
         if not path or not os.path.exists(str(path)):
             return Response("<h1>Error</h1><p>No se pudo generar el PDF.</p><a href='/'>Volver</a>", mimetype="text/html")
         return send_file(str(path), mimetype="application/pdf",

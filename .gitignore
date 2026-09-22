@@ -2,7 +2,7 @@ __pycache__/
 *.pyc
 data/imagenes/
 *.zip
-*.db
 salida/
 data_demo/
 .env
+*.db
