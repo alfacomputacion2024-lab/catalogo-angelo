@@ -91,7 +91,7 @@ def _download_image(url):
         return str(cached)
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=3) as resp:
             data = resp.read()
         cached.write_bytes(data)
         return str(cached)
@@ -125,8 +125,8 @@ class CatalogBuilder:
         self.c = canvas.Canvas(self.out_path, pagesize=self.size)
         self.c.setTitle(safe(f"{theme.get('store_name', '')} - {self.title}"))
         self._imgs_downloaded = 0
-        self._max_download = 40  # máx imágenes remotas a descargar por PDF
-        self._img_timeout_total = 120  # máx 120 segundos total para descargar imágenes
+        self._max_download = 50  # máx imágenes remotas a descargar por PDF
+        self._img_timeout_total = 150  # máx 150 segundos total para descargar imágenes
 
     # --- fuentes ------------------------------------------------------------
     def _setup_fonts(self):
@@ -155,35 +155,29 @@ class CatalogBuilder:
         c.setFillColor(self.col["primary"])
         c.rect(0, 0, self.W, self.H, stroke=0, fill=1)
 
-        # Sutil degradado decorativo (rectángulos semi-transparentes)
-        c.setFillColor(HexColor("#222222"))
-        c.rect(0, self.H * 0.35, self.W, self.H * 0.30, stroke=0, fill=1)
-        c.setFillColor(HexColor("#1e1e1e"))
-        c.rect(0, self.H * 0.38, self.W, self.H * 0.24, stroke=0, fill=1)
-
         # Líneas decorativas finas doradas arriba y abajo
         c.setFillColor(self.col["accent"])
-        c.rect(self.W*0.30, self.H - 50, self.W*0.40, 1.5, stroke=0, fill=1)
-        c.rect(self.W*0.30, 48, self.W*0.40, 1.5, stroke=0, fill=1)
+        c.rect(self.W*0.25, self.H - 50, self.W*0.50, 1.5, stroke=0, fill=1)
+        c.rect(self.W*0.25, 48, self.W*0.50, 1.5, stroke=0, fill=1)
 
         # Logo centrado arriba
         try:
             logo_path = _resolve_logo(t)
             if logo_path:
                 logo_w, logo_h = 180, 90
-                self._image(logo_path, (self.W - logo_w) / 2, self.H * 0.68, logo_w, logo_h, align="center")
+                self._image(logo_path, (self.W - logo_w) / 2, self.H * 0.72, logo_w, logo_h, align="center")
         except Exception:
             pass
 
         # Línea bajo logo
         c.setFillColor(self.col["accent"])
-        c.rect((self.W - 60) / 2, self.H * 0.66, 60, 2, stroke=0, fill=1)
+        c.rect((self.W - 60) / 2, self.H * 0.70, 60, 2, stroke=0, fill=1)
 
-        # Nombre centrado
+        # Nombre de la tienda
         c.setFillColor(self.col["cover_text"])
         c.setFont(self.bold, 32)
         store_name = self.s(t.get("store_name", ""))
-        y = self.H * 0.56
+        y = self.H * 0.60
         for line in simpleSplit(store_name, self.bold, 32, self.W * 0.76):
             c.drawCentredString(self.W / 2, y, line)
             y -= 38
@@ -193,10 +187,36 @@ class CatalogBuilder:
         c.setFillColor(self.col["accent"])
         c.drawCentredString(self.W / 2, y - 4, self.s(t.get("tagline", "")))
 
+        # Marcas incluidas (si hay pocas, listarlas)
+        brands_in_pdf = list(dict.fromkeys(p.get("brand", "") for p in self.products))
+        if brands_in_pdf:
+            c.setFont(self.font, 11)
+            c.setFillColor(self.col["cover_text"])
+            # Si hay 1 sola marca, mostrarla grande
+            if len(brands_in_pdf) == 1:
+                c.setFont(self.bold, 22)
+                c.setFillColor(self.col["accent"])
+                c.drawCentredString(self.W / 2, y - 38, self.s(brands_in_pdf[0].upper()))
+                c.setFont(self.font, 13)
+                c.setFillColor(self.col["cover_text"])
+                c.drawCentredString(self.W / 2, y - 58, f"{len(self.products)} modelos")
+            else:
+                # Varias marcas: listar compacto
+                c.setFont(self.font, 11)
+                brands_text = " · ".join(self.s(b) for b in brands_in_pdf[:10])
+                if len(brands_in_pdf) > 10:
+                    brands_text += f" +{len(brands_in_pdf) - 10} más"
+                yb = y - 38
+                for ln in simpleSplit(brands_text, self.font, 11, self.W * 0.80):
+                    c.drawCentredString(self.W / 2, yb, ln)
+                    yb -= 14
+                c.setFont(self.font, 12)
+                c.setFillColor(self.col["accent"])
+                c.drawCentredString(self.W / 2, yb - 4, f"{len(self.products)} modelos en total")
+
         # Nota
         c.setFillColor(self.col["cover_text"])
         c.setFont(self.font, 11)
-        c.drawCentredString(self.W / 2, y - 28, self.s(t.get("cover_note", "")))
 
         # Contacto
         c.setFont(self.font, 10)
@@ -324,18 +344,23 @@ class CatalogBuilder:
         img_h = h * 0.46
         drawn = False
         images = p.get("images") or []
-        # Solo descargar imágenes locales (NO remotas) para evitar timeout en Render
+        # Descargar imágenes (locales y remotas) con límite
         if self._imgs_downloaded < self._max_download:
             for rel in images[:1]:
-                # Solo imágenes locales (archivos en disco)
-                if not rel.startswith("http"):
+                img_path = None
+                if rel.startswith("http"):
+                    # Imagen remota: descargar con timeout corto
+                    img_path = _download_image(rel)
+                else:
+                    # Imagen local
                     local = config.IMAGES_DIR / rel
                     if local.exists():
                         img_path = str(local)
-                        drawn = self._image(img_path, x + pad, y + h - pad - img_h, w - 2 * pad, img_h)
-                        if drawn:
-                            self._imgs_downloaded += 1
-                            break
+                if img_path:
+                    drawn = self._image(img_path, x + pad, y + h - pad - img_h, w - 2 * pad, img_h)
+                    if drawn:
+                        self._imgs_downloaded += 1
+                        break
         if not drawn:
             c.setFillColor(self.col["muted"])
             c.setFont(self.font, 8)
@@ -402,10 +427,7 @@ class CatalogBuilder:
 
         for brand in order:
             items = sorted(groups[brand], key=self._sort_key)
-            # Saltar divider si la marca cabe en una página (optimización)
-            use_divider = t.get("brand_dividers", True) and len(items) > per_page
-            if use_divider:
-                self.divider(brand, len(items))
+            # Sin divider — ir directo a productos
             for start in range(0, len(items), per_page):
                 self.header_footer(brand)
                 for i, p in enumerate(items[start:start + per_page]):
