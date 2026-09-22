@@ -165,9 +165,20 @@
     </div>
   </div>
   {% endfor %}
-</div>
 
-<!-- Modal Editar -->
+  {% if total_pages > 1 %}
+  <div style="display:flex;justify-content:center;align-items:center;gap:14px;padding:24px 0;flex-wrap:wrap">
+    {% set base = url_for('catalogo') + ('?brand=' ~ selected_brand if selected_brand else '?') %}
+    {% if page > 1 %}
+      <a href="{{ base ~ '&page=' ~ (page - 1) }}" style="background:var(--accent);color:#000;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">« Anterior</a>
+    {% endif %}
+    <span style="color:var(--muted);font-size:13px">Página {{ page }} de {{ total_pages }} ({{ total }} productos)</span>
+    {% if page < total_pages %}
+      <a href="{{ base ~ '&page=' ~ (page + 1) }}" style="background:var(--accent);color:#000;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">Siguiente »</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
 <div class="modal-overlay" id="editModal">
   <div class="modal">
     <h3>✏️ Editar producto</h3>
