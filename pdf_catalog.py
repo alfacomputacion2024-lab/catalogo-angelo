@@ -163,22 +163,6 @@ class CatalogBuilder:
         c.rect(self.W*0.30, self.H - 50, self.W*0.40, 1.5, stroke=0, fill=1)
         c.rect(self.W*0.30, 48, self.W*0.40, 1.5, stroke=0, fill=1)
 
-        # Pequeños detalles decorativos (diamantes)
-        c.setFillColor(self.col["accent"])
-        for dx in [-1, 1]:
-            cx = self.W/2 + dx * (self.W * 0.22)
-            # Diamante como rectángulo rotado (usando 4 triángulos)
-            s = 4
-            pts = [(cx, self.H - 50 + s), (cx + s, self.H - 50), (cx, self.H - 50 - s), (cx - s, self.H - 50)]
-            c.setStrokeColor(self.col["accent"])
-            c.setLineWidth(1)
-            path = c.beginPath()
-            path.moveTo(*pts[0])
-            for px, py in pts[1:]:
-                path.lineTo(px, py)
-            path.close()
-            c.drawPath(path, stroke=1, fill=0)
-
         # Logo centrado arriba
         logo_path = _resolve_logo(t)
         if logo_path:
