@@ -41,7 +41,9 @@ def fmt_price(value, theme):
     return f"{theme.get('currency_symbol', '')} {txt}".strip()
 
 
-def pick_specs(specs: dict, n: int):
+def pick_specs(specs, n: int):
+    if not specs:
+        return []
     def score(item):
         key = item[0].lower()
         for i, word in enumerate(SPEC_PRIORITY):
@@ -314,9 +316,10 @@ class CatalogBuilder:
 
         img_h = h * 0.46
         drawn = False
+        images = p.get("images") or []
         # Solo descargar si no excedimos el límite de imágenes descargables
         if self._imgs_downloaded < self._max_download:
-            for rel in p["images"][:1]:
+            for rel in images[:1]:
                 img_path = _resolve_image(rel)
                 if not img_path:
                     local = config.IMAGES_DIR / rel
@@ -335,24 +338,25 @@ class CatalogBuilder:
         ty = y + h - pad - img_h - 14
         c.setFillColor(self.col["accent"])
         c.setFont(self.bold, 7.5)
-        c.drawString(x + pad, ty, self.fit((p["line"] or p["brand"]).upper(), self.bold, 7.5, inner))
+        c.drawString(x + pad, ty, self.fit((p.get("line") or p.get("brand") or "SIN LÍNEA").upper(), self.bold, 7.5, inner))
         ty -= 13
         c.setFillColor(self.col["text"])
         c.setFont(self.bold, 11)
-        c.drawString(x + pad, ty, self.fit(p["reference"], self.bold, 11, inner))
+        c.drawString(x + pad, ty, self.fit(p.get("reference") or "S/REF", self.bold, 11, inner))
         ty -= 11
         c.setFont(self.font, 7.5)
         c.setFillColor(self.col["muted"])
-        for ln in simpleSplit(self.s(p["name"]), self.font, 7.5, inner)[:2]:
+        for ln in simpleSplit(self.s(p.get("name") or ""), self.font, 7.5, inner)[:2]:
             c.drawString(x + pad, ty, ln)
             ty -= 9
-        if p.get("gender") and p["gender"] != "Sin definir":
-            c.drawString(x + pad, ty, self.fit(p["gender"], self.font, 7.5, inner))
+        gender = p.get("gender") or ""
+        if gender and gender != "Sin definir":
+            c.drawString(x + pad, ty, self.fit(gender, self.font, 7.5, inner))
             ty -= 9
         ty -= 2
         c.setFillColor(self.col["text"])
         c.setFont(self.font, 7)
-        for k, v in pick_specs(p["specs"], int(self.theme.get("specs_per_card", 3))):
+        for k, v in pick_specs(p.get("specs"), int(self.theme.get("specs_per_card", 3))):
             if ty < y + pad + 24:
                 break
             c.drawString(x + pad, ty, self.fit(f"{k}: {v}", self.font, 7, inner))
@@ -368,9 +372,9 @@ class CatalogBuilder:
 
     @staticmethod
     def _sort_key(p):
-        ln = p["line"] or ""
+        ln = p.get("line") or ""
         idx = config.LINE_ORDER.index(ln) if ln in config.LINE_ORDER else 99
-        return (idx, ln, p["gender"] or "", p["reference"])
+        return (idx, ln, p.get("gender") or "", p.get("reference") or "")
 
     # --- armado -------------------------------------------------------------------
     def build(self):
@@ -384,7 +388,7 @@ class CatalogBuilder:
         self.cover()
         groups = {}
         for p in self.products:
-            groups.setdefault(p["brand"], []).append(p)
+            groups.setdefault(p.get("brand", "Sin marca"), []).append(p)
         order = [b for b in config.BRAND_ORDER if b in groups] + [b for b in groups if b not in config.BRAND_ORDER]
 
         for brand in order:
@@ -399,7 +403,16 @@ class CatalogBuilder:
                     r, cidx = divmod(i, cols)
                     x = m + cidx * (cw + gap)
                     y = self.H - top - (r + 1) * ch - r * gap
-                    self.card(x, y, cw, ch, p)
+                    try:
+                        self.card(x, y, cw, ch, p)
+                    except Exception:
+                        # Si la tarjeta falla, dibujar vacía
+                        c = self.c
+                        c.setFillColor(HexColor("#333333"))
+                        c.rect(x, y, cw, ch, stroke=0, fill=1)
+                        c.setFillColor(self.col.get("muted", HexColor("#888888")))
+                        c.setFont(self.font, 8)
+                        c.drawCentredString(x + cw/2, y + ch/2, "Error en producto")
                 self.c.showPage()
                 self.page_no += 1
         self.c.save()
