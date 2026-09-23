@@ -155,7 +155,14 @@ def img(p):
             return Response(data, content_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
         except Exception:
             abort(404)
-    return send_from_directory(config.IMAGES_DIR, p)
+    # Si el archivo local existe, servirlo
+    local = config.IMAGES_DIR / p
+    if local.exists():
+        return send_from_directory(config.IMAGES_DIR, p)
+    # Si no existe (ej: en Render), devolver 1x1 pixel transparente
+    import base64
+    PIXEL = base64.b64decode("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
+    return Response(PIXEL, content_type="image/gif", headers={"Cache-Control": "public, max-age=86400"})
 
 
 @app.route("/static/<path:p>")
