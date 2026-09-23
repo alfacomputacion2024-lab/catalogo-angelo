@@ -184,12 +184,14 @@
           {% if p.images %}
             {% set img_src = p.images[0] if p.images else '' %}
             {% if img_src.startswith('http') %}
-              <img loading="lazy" src="{{ img_src }}" alt="{{ p.reference }}" width="280" height="200">
+              <img loading="lazy" src="{{ img_src }}" alt="{{ p.reference }}" width="280" height="220" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+              <div class="img-error" style="display:none">📷<br>Sin foto</div>
             {% else %}
-              <img loading="lazy" src="{{ url_for('img', p=img_src) }}" alt="{{ p.reference }}" width="280" height="200">
+              <img loading="lazy" src="{{ url_for('img', p=img_src) }}" alt="{{ p.reference }}" width="280" height="220" onload="if(this.naturalWidth>2){this.style.display='block';this.nextElementSibling.style.display='none'}" style="display:none">
+              <div class="img-error" style="display:flex">📷<br><small>Próximamente</small></div>
             {% endif %}
           {% else %}
-            <span class="no-img">Sin imagen</span>
+            <span class="no-img">📷 Sin imagen</span>
           {% endif %}
         </div>
         <div class="card-body">

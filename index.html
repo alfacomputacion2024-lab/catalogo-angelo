@@ -201,8 +201,8 @@
                   <img loading="lazy" src="{{ img }}" alt="{{ p.reference }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                   <div class="img-err">📷 Sin foto</div>
                 {% else %}
-                  <img loading="lazy" src="{{ url_for('img', p=img) }}" alt="{{ p.reference }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                  <div class="img-err">📷 Sin foto</div>
+                  <img loading="lazy" src="{{ url_for('img', p=img) }}" alt="{{ p.reference }}" onload="if(this.naturalWidth>2){this.style.display='block';this.nextElementSibling.style.display='none'}" style="display:none">
+                  <div class="img-err" style="display:flex">📷<br><small>Pendiente</small></div>
                 {% endif %}
               {% else %}
                 <span class="noimg">📷 Sin imagen</span>
