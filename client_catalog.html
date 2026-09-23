@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Angelo - Catálogo de Relojes</title>
+  <link rel="icon" type="image/png" href="/static/logo_A.png">
+  <style>
+    :root{
+      --bg:#0a0a0f; --surface:#12121a; --card:#1a1a24;
+      --border:#2a2a3a; --ink:#e8e8f0; --muted:#6b6b80;
+      --acc:#C8FF00; --acc-dim:#99CC00; --gold:#D4A857;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{font-size:16px}
+    body{
+      font:400 1rem/1.6 'Segoe UI',system-ui,sans-serif;
+      background:var(--bg);color:var(--ink);min-height:100vh
+    }
+    /* Header */
+    header{
+      padding:1rem 2rem;background:var(--surface);border-bottom:1px solid var(--border)}
+    .header{
+      max-width:1200px;margin:auto;display:flex;justify-content:space-between;align-items:center}
+    .logo{
+      display:flex;align-items:center;gap:.5rem}
+    .logo svg{
+      width:32;height:32;fill:var(--acc)}
+    .nav a{
+      color:var(--muted);text-decoration:none;margin-left:1rem;font-size:.9rem}
+    .nav a:hover{color:var(--acc)}
+    /* Main */
+    main{
+      max-width:1200px;padding:2rem;margin:auto}
+    .section{
+      margin-bottom:2rem}
+    .brand-header{
+      color:var(--acc);font-size:1.8rem;margin-bottom:1.5rem;border-bottom:1px solid var(--border);
+      padding-bottom:.5rem}
+    /* Grid */
+    .grid{
+      display:grid;gap:1.5rem}
+    @media(min-width:768px){.grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}}
+    @media(min-width:1200px){.grid{grid-template-columns:repeat(4,1fr)}}
+    /* Card */
+    .card{
+      background:var(--card);border-radius:12px;padding:1.5rem;text-decoration:none;color:var(--ink);
+      transition:transform .2s,box-shadow .2s}
+    .card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+    .card-img{
+      width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;margin-bottom:1rem}
+    .card-img img{
+      width:100%;height:100%;object-fit:contain;background:#111}
+    .card-body .ref{
+      color:var(--muted);font-size:.85rem;margin-bottom:.3rem;display:block}
+    .card-body .name{
+      font-size:1.1rem;margin-bottom:.5rem;display:block;min-height:2.2rem}
+    .card-body .brand{
+      color:var(--acc);font-size:.8rem;text-transform:uppercase;margin-bottom:.3rem;display:block}
+    /* No results */
+    .empty{
+      text-align:center;padding:3rem;color:var(--muted)}
+    /* Footer */
+    footer{
+      padding:2rem;text-align:center;color:var(--muted);font-size:.85rem;border-top:1px solid var(--border)}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7h3v10H2V7zm8 4H7v10h10V7zm-9 8c.83 0 1.5-.67 1.5-1.5S8.83 5 8 5S6.5 5.67 6.5 6.5 6.5 8 6.5 8Zm0 2C5.13 8 3 10.13 3 12s2.13 4 5 4 5-2.13 5-4-2.13-5-5-4Z"/></svg>
+      Angelo
+    </div>
+    <nav class="nav">
+      <a href="/">Inicio</a>
+      <a href="/client">Catálogo</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="brand" id="casio">
+    <h2 class="brand-header">Casio</h2>
+    <div class="grid">
+      {% for p in products %}
+        {% if p.brand == 'Casio' %}
+        <a href="{{ p.url }}" class="card" target="_blank">
+          <div class="card-img">
+            {% if p.images %}
+              <img src="{{ p.images[0] }}" alt="{{ p.reference }}">
+            {% else %}
+              <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
+            {% endif %}
+          </div>
+          <div class="card-body">
+            <div class="ref">{{ p.reference }}</div>
+            <div class="name">{{ p.name|upper }}</div>
+            <div class="brand">{{ p.brand|upper }}</div>
+          </div>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="brand" id="am-relojes">
+    <h2 class="brand-header">AM Relojes</h2>
+    <div class="grid">
+      {% for p in products %}
+        {% if p.brand == 'AM Relojes' %}
+        <a href="{{ p.url }}" class="card" target="_blank">
+          <div class="card-img">
+            {% if p.images %}
+              <img src="{{ p.images[0] }}" alt="{{ p.reference }}">
+            {% else %}
+              <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
+            {% endif %}
+          </div>
+          <div class="card-body">
+            <div class="ref">{{ p.reference }}</div>
+            <div class="name">{{ p.name|upper }}</div>
+            <div class="brand">{{ p.brand|upper }}</div>
+          </div>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="brand" id="jean-vernier">
+    <h2 class="brand-header">Jean Vernier</h2>
+    <div class="grid">
+      {% for p in products %}
+        {% if p.brand == 'Jean Vernier' %}
+        <a href="{{ p.url }}" class="card" target="_blank">
+          <div class="card-img">
+            {% if p.images %}
+              <img src="{{ p.images[0] }}" alt="{{ p.reference }}">
+            {% else %}
+              <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
+            {% endif %}
+          </div>
+          <div class="card-body">
+            <div class="ref">{{ p.reference }}</div>
+            <div class="name">{{ p.name|upper }}</div>
+            <div class="brand">{{ p.brand|upper }}</div>
+          </div>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="brand" id="other-brands">
+    <h2 class="brand-header">Otras marcas</h2>
+    <div class="grid">
+      {% for p in products %}
+        {% if p.brand not in ['Casio', 'AM Relojes', 'Jean Vernier'] %}
+        <a href="{{ p.url }}" class="card" target="_blank">
+          <div class="card-img">
+            {% if p.images %}
+              <img src="{{ p.images[0] }}" alt="{{ p.reference }}">
+            {% else %}
+              <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
+            {% endif %}
+          </div>
+          <div class="card-body">
+            <div class="ref">{{ p.reference }}</div>
+            <div class="name">{{ p.name|upper }}</div>
+            <div class="brand">{{ p.brand|upper }}</div>
+          </div>
+        </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>Angelo · @angelo.py · Encarnación, Paraguay</p>
+</footer>
+
+</body>
+</html>
