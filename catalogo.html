@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="{{ theme.store_name }} - Catálogo de relojes, joyería y accesorios. Consultá precios y disponibilidad.">
+<meta property="og:title" content="{{ theme.store_name }} · Catálogo Online">
+<meta property="og:description" content="Relojes de las mejores marcas: Casio, Tommy Hilfiger, Seiko, Fossil y más. Envíos a todo el país.">
+<meta property="og:type" content="website">
 <link rel="icon" type="image/png" href="/static/logo_A.png">
 <title>Catálogo Online · {{ theme.store_name }}</title>
 <style>
@@ -23,8 +27,17 @@
   .header-actions a { color: var(--muted); text-decoration: none; font-size: 13px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; transition: all .2s; }
   .header-actions a:hover { color: var(--text); border-color: var(--accent); }
 
+  /* --- Search --- */
+  .search-bar { padding: 16px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .search-wrap { max-width: 500px; margin: 0 auto; position: relative; }
+  .search-wrap input { width: 100%; padding: 10px 16px 10px 40px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; font-size: 14px; }
+  .search-wrap input:focus { outline: none; border-color: var(--accent); }
+  .search-wrap .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 16px; }
+  .search-count { text-align: center; font-size: 12px; color: var(--muted); margin-top: 6px; }
+
   /* --- Brand tabs --- */
-  .tabs { display: flex; gap: 0; padding: 0 24px; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .tabs { display: flex; gap: 0; padding: 0 24px; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tabs::-webkit-scrollbar { height: 0; }
   .tab { padding: 12px 20px; font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; transition: all .2s; white-space: nowrap; }
   .tab:hover { color: var(--text); }
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
@@ -39,13 +52,14 @@
   .brand-header .count { font-size: 12px; color: var(--muted); }
 
   /* --- Grid --- */
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
 
   /* --- Product card --- */
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: all .25s; position: relative; }
   .card:hover { border-color: var(--accent-dim); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
   .card-img { width: 100%; height: 200px; display: flex; align-items: center; justify-content: center; background: #111; overflow: hidden; }
-  .card-img img { max-width: 90%; max-height: 90%; object-fit: contain; }
+  .card-img img { max-width: 90%; max-height: 90%; object-fit: contain; transition: transform .3s; }
+  .card:hover .card-img img { transform: scale(1.05); }
   .card-img .no-img { color: var(--muted); font-size: 13px; }
   .card-body { padding: 14px; }
   .card-brand { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
@@ -53,12 +67,18 @@
   .card-name { font-size: 12px; color: var(--muted); line-height: 1.3; min-height: 32px; margin-bottom: 6px; }
   .card-line { font-size: 11px; color: var(--muted); }
   .card-line span { background: #2a2a2a; padding: 2px 8px; border-radius: 4px; }
+  .card-price { font-size: 14px; font-weight: 700; color: var(--accent); margin-top: 6px; }
 
   /* --- Card actions --- */
   .card-actions { display: flex; gap: 6px; padding: 0 14px 14px; }
   .card-actions button { flex: 1; padding: 7px 0; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; transition: all .2s; }
   .card-actions .btn-edit:hover { color: var(--accent); border-color: var(--accent); }
   .card-actions .btn-delete:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-bg); }
+
+  /* --- WhatsApp floating --- */
+  .whatsapp-float { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; background: #25D366; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,.4); z-index: 500; transition: transform .2s; text-decoration: none; }
+  .whatsapp-float:hover { transform: scale(1.1); }
+  .whatsapp-float svg { width: 28px; height: 28px; fill: #fff; }
 
   /* --- Modal --- */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 1000; align-items: center; justify-content: center; }
@@ -74,7 +94,7 @@
   .modal-actions .save:hover { background: var(--accent-dim); }
 
   /* --- Toast --- */
-  .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; font-size: 13px; z-index: 2000; animation: slideIn .3s; }
+  .toast { position: fixed; bottom: 24px; right: 90px; padding: 12px 20px; border-radius: 8px; font-size: 13px; z-index: 2000; animation: slideIn .3s; }
   .toast.ok { background: #166534; color: #fff; }
   .toast.error { background: #991b1b; color: #fff; }
   @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -83,14 +103,27 @@
   .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
   .empty h3 { font-size: 18px; margin-bottom: 8px; }
   .empty p { font-size: 13px; }
-  .empty code { background: var(--card); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+
+  /* --- Footer --- */
+  .footer { text-align: center; padding: 30px 20px; border-top: 1px solid var(--border); margin-top: 40px; color: var(--muted); font-size: 12px; }
+  .footer a { color: var(--accent); text-decoration: none; }
 
   /* --- Responsive --- */
   @media (max-width: 600px) {
     .header { padding: 12px 16px; }
+    .header h1 { font-size: 16px; }
     .content { padding: 16px; }
-    .grid { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .card-img { height: 140px; }
+    .card-body { padding: 10px; }
+    .card-ref { font-size: 14px; }
+    .card-name { font-size: 11px; min-height: 24px; }
+    .card-actions { padding: 0 10px 10px; }
     .tabs { padding: 0 16px; }
+    .search-bar { padding: 12px 16px; }
+  }
+  @media (max-width: 380px) {
+    .grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -99,7 +132,7 @@
 <div class="header">
   <div style="display:flex;align-items:center;gap:12px;">
     <img src="/static/logo.PNG" alt="Angelo" class="header-logo" onerror="this.style.display='none'">
-    <h1>{{ theme.store_name }} <span>· Catálogo Online</span></h1>
+    <h1>{{ theme.store_name }} <span>· Catálogo</span></h1>
   </div>
   <div class="header-actions">
     {% if usuario %}
@@ -114,12 +147,20 @@
 </div>
 
 <div class="tabs">
-  <a class="tab {{ 'active' if not selected_brand }}" href="{{ url_for('catalogo') }}">Todas<span class="count">{{ by_brand.values()|map('length')|sum }}</span></a>
+  <a class="tab {{ 'active' if not selected_brand }}" href="{{ url_for('catalogo') }}">Todas<span class="count">{{ total }}</span></a>
   {% for brand in brands %}
     {% if brand in by_brand %}
     <a class="tab {{ 'active' if selected_brand==brand }}" href="{{ url_for('catalogo', brand=brand) }}">{{ brand|short_brand }}<span class="count">{{ by_brand[brand]|length }}</span></a>
     {% endif %}
   {% endfor %}
+</div>
+
+<div class="search-bar">
+  <div class="search-wrap">
+    <span class="icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Buscar por referencia, nombre o línea..." oninput="filterProducts()">
+  </div>
+  <div class="search-count" id="searchCount"></div>
 </div>
 
 <div class="content">
@@ -131,21 +172,21 @@
   {% endif %}
 
   {% for brand, products in by_brand.items() %}
-  <div class="brand-section" id="brand-{{ brand|replace(' ','-')|lower }}">
+  <div class="brand-section" data-brand="{{ brand }}" id="brand-{{ brand|replace(' ','-')|lower }}">
     <div class="brand-header">
       <h2>{{ brand|short_brand }}</h2>
       <span class="count">{{ products|length }} productos</span>
     </div>
     <div class="grid">
       {% for p in products %}
-      <div class="card" data-id="{{ p.id }}">
+      <div class="card" data-id="{{ p.id }}" data-search="{{ (p.reference ~ ' ' ~ p.name ~ ' ' ~ (p.line or '') ~ ' ' ~ (p.gender or ''))|lower }}">
         <div class="card-img">
           {% if p.images %}
             {% set img_src = p.images[0] if p.images else '' %}
             {% if img_src.startswith('http') %}
-              <img loading="lazy" src="{{ img_src }}" alt="{{ p.reference }}">
+              <img loading="lazy" src="{{ img_src }}" alt="{{ p.reference }}" width="280" height="200">
             {% else %}
-              <img loading="lazy" src="{{ url_for('img', p=img_src) }}" alt="{{ p.reference }}">
+              <img loading="lazy" src="{{ url_for('img', p=img_src) }}" alt="{{ p.reference }}" width="280" height="200">
             {% endif %}
           {% else %}
             <span class="no-img">Sin imagen</span>
@@ -155,12 +196,15 @@
           <div class="card-brand">{{ p.brand|short_brand }}</div>
           <div class="card-ref">{{ p.reference }}</div>
           <div class="card-name">{{ p.name }}</div>
-          <div class="card-line"><span>{{ p.line or 'Sin línea' }}</span> · {{ p.gender or '' }}</div>
+          <div class="card-line"><span>{{ p.line or 'Sin línea' }}</span> {{ ('· ' ~ p.gender) if p.gender and p.gender != 'Sin definir' else '' }}</div>
+          {% if p.sell_price %}<div class="card-price">Gs. {{ '{:,.0f}'.format(p.sell_price).replace(',', '.') }}</div>{% endif %}
         </div>
+        {% if usuario %}
         <div class="card-actions">
           <button class="btn-edit" onclick='openEdit({{ p|tojson }})'>✏️ Editar</button>
           <button class="btn-delete" onclick="deleteProduct({{ p.id }}, '{{ p.reference }}')">🗑️ Eliminar</button>
         </div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
@@ -180,6 +224,13 @@
   </div>
   {% endif %}
 </div>
+
+<div class="footer">
+  <p>{{ theme.store_name }} · {{ theme.tagline }}</p>
+  <p style="margin-top:4px">{% for line in theme.contact_lines %}{{ line }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+  <p style="margin-top:8px">© 2026 Catálogo generado por <a href="#">Angelo</a></p>
+</div>
+
 <div class="modal-overlay" id="editModal">
   <div class="modal">
     <h3>✏️ Editar producto</h3>
@@ -210,6 +261,11 @@
 
 <!-- Toast -->
 <div class="toast" id="toast" style="display:none"></div>
+
+<!-- WhatsApp -->
+<a href="https://wa.me/595000000000" target="_blank" class="whatsapp-float" title="Contactanos por WhatsApp">
+  <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+</a>
 
 <script>
 function openEdit(p) {
@@ -266,6 +322,34 @@ async function deleteProduct(id, ref) {
     if (card) { card.style.opacity = '0'; card.style.transform = 'scale(.9)'; setTimeout(() => card.remove(), 300); }
   } else {
     showToast('❌ ' + (j.error || 'Error'), 'error');
+  }
+}
+
+// --- Búsqueda en tiempo real ---
+function filterProducts() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const cards = document.querySelectorAll('.card[data-search]');
+  const sections = document.querySelectorAll('.brand-section');
+  let shown = 0;
+
+  cards.forEach(card => {
+    const match = !q || card.dataset.search.includes(q);
+    card.style.display = match ? '' : 'none';
+    if (match) shown++;
+  });
+
+  // Ocultar secciones vacías
+  sections.forEach(sec => {
+    const visible = sec.querySelectorAll('.card[style=""], .card:not([style])');
+    const hasVisible = [...sec.querySelectorAll('.card')].some(c => c.style.display !== 'none');
+    sec.style.display = hasVisible ? '' : 'none';
+  });
+
+  const el = document.getElementById('searchCount');
+  if (q) {
+    el.textContent = `${shown} resultado${shown !== 1 ? 's' : ''} para "${q}"`;
+  } else {
+    el.textContent = '';
   }
 }
 
