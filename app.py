@@ -83,7 +83,7 @@ MARCAS_RELOJ = {
 # Tiendas cuyos productos son relojes (la marca real está en línea/nombre/url)
 TIENDAS_RELOJES = {
     "AM Relojes", "Casa Joia", "TUPI", "Joyería G&A", "Joyería Sosa",
-    "Asunción Joyas", "My Shuzz", "Joyería Domínguez",
+    "Asunción Joyas", "My Shuzz", "Joyería Domínguez", "Joyería Espínola",
 }
 
 # Tiendas de lentes / perfumes -> categoría visible
