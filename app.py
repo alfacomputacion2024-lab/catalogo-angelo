@@ -47,8 +47,12 @@ def parse_price(value):
     except (ValueError, TypeError):
         return None
 
+# Plantillas: en producción (repo plano) están en la raíz; en desarrollo local
+# viven en templates/. Detectamos cuál de las dos exista.
+_TPL_DIR = 'templates' if os.path.isdir(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')) else '.'
 app = Flask(__name__, 
-            template_folder='.',
+            template_folder=_TPL_DIR,
             static_folder='.',
             static_url_path='/static')
 app.secret_key = "catalogo-relojes-2026"
@@ -63,6 +67,83 @@ def short_brand(name):
     return name
 
 app.jinja_env.filters['short_brand'] = short_brand
+
+# --- Menú superior: mostrar solo marcas de relojes (nunca la tienda de origen) ---
+MARCAS_RELOJ = {
+    "Casio", "Bulova", "Tommy Hilfiger", "Calvin Klein", "Michael Kors", "Lacoste",
+    "Fossil", "Armani Exchange", "Hugo Boss", "Diesel", "Jean Vernier", "Q&Q",
+    "Curren", "Skmei", "Invicta", "NaviForce", "Hummer", "Seiko", "Tissot",
+    "Victorinox", "Citizen", "Orient", "Anne Klein", "Adidas", "G-Shock",
+    "Edifice", "Baby-G", "ProTrek", "Casper", "Winner", "Skagen", "Obaku",
+    "Michael Kors", "Guess", "Emporio Armani", "Dkny", "Coach", "Kate Spade",
+    "Versace", "Valentino", "Calvin", "Replay", "Scuderia", "Lotus", "Ice",
+    "Qaza", "Alexandre", "Tissot PRX",
+}
+
+# Tiendas cuyos productos son relojes (la marca real está en línea/nombre/url)
+TIENDAS_RELOJES = {
+    "AM Relojes", "Casa Joia", "TUPI", "Joyería G&A", "Joyería Sosa",
+    "Asunción Joyas", "My Shuzz", "Joyería Domínguez",
+}
+
+# Tiendas de lentes / perfumes -> categoría visible
+TIENDAS_LENTES = {
+    "Arar Óptica", "Óptica Santa Lucía", "Óptica Visión",
+    "Infinite Eyewear", "Valemar", "Ronan Eyewear",
+}
+TIENDAS_PERFUMES = {
+    "La Perfumería", "Lual Perfumería", "Punto Tienda",
+    "Shopping China Perfumes", "Perfumes",
+}
+
+# Palabra clave (buscada en línea + nombre + url, en minúsculas) -> marca visible
+CLAVES_MARCA = [
+    ("g-shock", "Casio"), ("gshock", "Casio"), ("baby-g", "Casio"), ("babyg", "Casio"),
+    ("edifice", "Casio"), ("protrek", "Casio"), ("casio", "Casio"),
+    ("q&q", "Q&Q"), ("qyq", "Q&Q"), ("relojes-qq", "Q&Q"),
+    ("naviforce", "NaviForce"), ("invicta", "Invicta"), ("curren", "Curren"),
+    ("skmei", "Skmei"), ("hummer", "Hummer"), ("tommy", "Tommy Hilfiger"),
+    ("victorinox", "Victorinox"), ("tissot", "Tissot"), ("seiko", "Seiko"),
+    ("citizen", "Citizen"), ("orient", "Orient"), ("bulova", "Bulova"),
+    ("fossil", "Fossil"), ("calvin", "Calvin Klein"), ("michael kors", "Michael Kors"),
+    ("lacoste", "Lacoste"), ("armani", "Armani Exchange"), ("hugo", "Hugo Boss"),
+    ("boss", "Hugo Boss"), ("diesel", "Diesel"), ("vernier", "Jean Vernier"),
+    ("anne klein", "Anne Klein"), ("anna klein", "Anne Klein"), ("adidas", "Adidas"),
+    ("jean vernier", "Jean Vernier"), ("guess", "Guess"), ("versace", "Versace"),
+    ("casper", "Casper"), ("skagen", "Skagen"), ("obaku", "Obaku"),
+    ("emporio", "Emporio Armani"), ("dkny", "DKNY"), ("coach", "Coach"),
+    ("i.n.o.x", "Victorinox"), ("air pro", "Victorinox"), ("vip", "ViP"),
+]
+
+
+def watch_brand(brand, line="", name="", url=""):
+    """Nombre visible para el menú superior: la marca real del producto,
+    nunca la tienda de la que se scrapeó."""
+    brand = short_brand(brand) if brand else ""
+    if brand in MARCAS_RELOJ:
+        return brand
+    if brand in TIENDAS_LENTES:
+        return line if line in ("Lentes", "Armazones", "Lentes recetados") else "Lentes"
+    if brand in TIENDAS_PERFUMES:
+        return line if line == "Perfumes" else "Perfumes"
+    text = f"{line or ''} {name or ''} {url or ''}".lower()
+    for kw, marca in CLAVES_MARCA:
+        if kw in text:
+            return marca
+    if brand in TIENDAS_RELOJES:
+        return "Varios"
+    return brand or "Varios"
+
+
+def header_pills():
+    """Conteo de productos activos agrupados por marca visible (orden desc)."""
+    counts = {}
+    for p in db.query_products(status="active"):
+        lbl = watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url"))
+        counts[lbl] = counts.get(lbl, 0) + 1
+    return sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+
+
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 db.init_db()
 
@@ -134,7 +215,7 @@ def index():
         genders=db.distinct_values("gender", opt_status),
         n_active=sum(v["active"] for v in totals.values()),
         n_deleted=sum(v["deleted"] for v in totals.values()),
-        by_brand=totals, back=request.query_string.decode(),
+        by_brand=totals, pills=header_pills(), back=request.query_string.decode(),
         page=page, total_pages=total_pages, total=total,
     )
 

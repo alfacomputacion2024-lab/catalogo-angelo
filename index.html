@@ -117,10 +117,8 @@
   <div class="stats">
     <span class="pill">👁 <b>{{ n_active }}</b> activos</span>
     <span class="pill">🗑 <b>{{ n_deleted }}</b> eliminados</span>
-    {% for b, v in by_brand.items() %}
-      {% if v.active > 0 %}
-      <span class="pill">{{ b|short_brand }}: <b>{{ v.active }}</b></span>
-      {% endif %}
+    {% for b, n in pills %}
+      <span class="pill">{{ b }}: <b>{{ n }}</b></span>
     {% endfor %}
   </div>
   <div class="hdr-right">
