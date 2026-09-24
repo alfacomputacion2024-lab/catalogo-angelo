@@ -290,6 +290,17 @@ def catalogo():
 
 
 # =============================================================================
+# Catálogo para clientes (solo visual, sin admin, sin precios)
+# =============================================================================
+@app.route("/client")
+def client_catalog():
+    products = db.query_products(status="active")
+    brands = db.distinct_values("brand", "active")
+    return render_template("client_catalog.html", products=products, brands=brands,
+                           theme=json.loads(config.THEME_PATH.read_text(encoding="utf-8")))
+
+
+# =============================================================================
 # Agregar producto manualmente
 # =============================================================================
 @app.route("/agregar", methods=["GET", "POST"])
