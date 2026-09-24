@@ -1,6 +1,5 @@
 __pycache__/
 *.pyc
-data/imagenes/
 *.zip
 salida/
 data_demo/
