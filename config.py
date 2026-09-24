@@ -519,6 +519,80 @@ BRANDS = [
         "selectors": {},
         "notes": "Proveedor local Paraguay. Casio (212), Tommy, Seiko, Skmei, Q&Q, Curren, NaviForce, Fossil, Hummer.",
     },
+
+    # --- Nuevas fuentes (agregadas manualmente) ---
+    {
+        "key": "caterpillar",
+        "name": "Caterpillar",
+        "mode": "html",
+        "base_url": "https://shopcaterpillar.com",
+        "start_urls": [
+            {"url": "https://shopcaterpillar.com/es/collections/watches", "line": "Caterpillar"},
+        ],
+        "notes": "Caterpillar watches. Shopify store.",
+    },
+    {
+        "key": "festina",
+        "name": "Festina",
+        "mode": "html",
+        "base_url": "https://festina.com",
+        "start_urls": [
+            {"url": "https://festina.com/es-ES", "line": "Festina"},
+        ],
+        "notes": "Festina oficial. Relojes.",
+    },
+    {
+        "key": "nissei_relojes",
+        "name": "Nissei Relojes",
+        "mode": "html",
+        "base_url": "https://nissei.com",
+        "start_urls": [
+            {"url": "https://nissei.com/py/ropas-calzados-accesorios/unisex/relojes-y-accesorios", "line": "General"},
+        ],
+        "notes": "Nissei Paraguay. Relojes y accesorios.",
+    },
+    {
+        "key": "cellshop",
+        "name": "Cellshop",
+        "mode": "html",
+        "base_url": "https://cellshop.com.py",
+        "start_urls": [
+            {"url": "https://cellshop.com.py/catalogsearch/result/?q=reloj", "line": "General"},
+        ],
+        "notes": "Cellshop Paraguay. Busqueda de relojes.",
+    },
+    {
+        "key": "adidas",
+        "name": "Adidas",
+        "mode": "html",
+        "base_url": "https://www.adidas.com.py",
+        "start_urls": [],
+        "notes": "Adidas relojes. Completar URLs.",
+    },
+    {
+        "key": "victorino",
+        "name": "Victorino",
+        "mode": "html",
+        "base_url": "",
+        "start_urls": [],
+        "notes": "Victorino. Completar URLs.",
+    },
+    {
+        "key": "lentes",
+        "name": "Lentes",
+        "mode": "html",
+        "base_url": "",
+        "start_urls": [],
+        "notes": "Lentes / Armazon / Lentes recetados. Completar URLs.",
+    },
+    {
+        "key": "perfumes",
+        "name": "Perfumes",
+        "mode": "html",
+        "base_url": "",
+        "start_urls": [],
+        "notes": "Perfumes. Completar URLs.",
+    },
 ]
 
 BRAND_BY_KEY = {b["key"]: b for b in BRANDS}
