@@ -593,6 +593,225 @@ BRANDS = [
         "start_urls": [],
         "notes": "Perfumes. Completar URLs.",
     },
+
+    # --- Tiendas paraguayas de relojes (agregadas) ---
+    {
+        "key": "casa_joia",
+        "product_link_regex": ".*/product\-page/.*",
+        "name": "Casa Joia",
+        "mode": "html",
+        "base_url": "https://www.casajoia.com.py",
+        "start_urls": [
+            {"url": "https://www.casajoia.com.py/casio", "line": "Casio"},
+            {"url": "https://www.casajoia.com.py/qyq", "line": "Q&Q"},
+            {"url": "https://www.casajoia.com.py/curren", "line": "Curren"},
+            {"url": "https://www.casajoia.com.py/navi-force", "line": "NaviForce"},
+            {"url": "https://www.casajoia.com.py/invicta", "line": "Invicta"},
+            {"url": "https://www.casajoia.com.py/relojes", "line": "General"},
+        ],
+        "notes": "Casa Joia Paraguay. Casio, Q&Q, Curren, NaviForce, Invicta, Skmei.",
+    },
+    {
+        "key": "tupi",
+        "js": True,
+        "product_link_regex": ".*/producto/.*",
+        "name": "TUPI",
+        "mode": "html",
+        "base_url": "https://www.tupi.com.py",
+        "start_urls": [
+            {"url": "https://www.tupi.com.py/marca/243/CASIO", "line": "Casio"},
+            {"url": "https://www.tupi.com.py/marca/1265/Q&Q", "line": "Q&Q"},
+        ],
+        "notes": "TUPI S.A. Paraguay. Casio, Q&Q.",
+    },
+    {
+        "key": "joyeria_gya",
+        "max_pages": 10,
+        "page_param": "page",
+        "product_link_regex": ".*/reloj\-.*",
+        "name": "Joyería G&A",
+        "mode": "html",
+        "base_url": "https://joyeriagya.com",
+        "start_urls": [
+            {"url": "https://joyeriagya.com/relojes/", "line": "General"},
+            {"url": "https://joyeriagya.com/marca/qyq/", "line": "Q&Q"},
+        ],
+        "notes": "Joyería G&A Paraguay. Casio, Seiko, Q&Q.",
+    },
+    {
+        "key": "tienda_naranja",
+        "product_link_regex": ".*\.html.*",
+        "name": "Tienda Naranja",
+        "mode": "html",
+        "base_url": "https://tiendanaranja.com.py",
+        "start_urls": [
+            {"url": "https://tiendanaranja.com.py/moda/relojes.html", "line": "General"},
+        ],
+        "notes": "Tienda Naranja Paraguay. Casio, Tiempo de Relojes.",
+    },
+    {
+        "key": "myshuzz",
+        "product_link_regex": ".*/p.*",
+        "name": "My Shuzz",
+        "mode": "html",
+        "base_url": "https://www.myshuzz.com.py",
+        "start_urls": [
+            {"url": "https://www.myshuzz.com.py/moda/relojes", "line": "General"},
+            {"url": "https://www.myshuzz.com.py/moda/relojes/relojes-formales", "line": "Formales"},
+        ],
+        "notes": "My Shuzz Paraguay. Victorinox relojes.",
+    },
+    {
+        "key": "asuncion_joyas",
+        "product_link_regex": ".*/producto/.*",
+        "name": "Asunción Joyas",
+        "mode": "html",
+        "base_url": "https://asuncionjoyas.com.py",
+        "start_urls": [
+            {"url": "https://asuncionjoyas.com.py/producto-categoria/relojes/", "line": "General"},
+        ],
+        "notes": "Asunción Joyas Paraguay. Q&Q relojes.",
+    },
+    {
+        "key": "joyeria_sosa",
+        "product_link_regex": ".*/producto/.*",
+        "name": "Joyería Sosa",
+        "mode": "html",
+        "base_url": "https://www.joyeriasosa.com.py",
+        "start_urls": [
+            {"url": "https://www.joyeriasosa.com.py/product-category/relojes/", "line": "General"},
+        ],
+        "notes": "Joyería Sosa Paraguay. Victorinox, Tissot.",
+    },
+    # --- Lentes y Armazones ---
+    {
+        "key": "arar_optica",
+        "product_link_regex": ".*/producto/.*",
+        "name": "Arar Óptica",
+        "mode": "html",
+        "base_url": "https://www.araroptica.com.py",
+        "start_urls": [
+            {"url": "https://www.araroptica.com.py/categoria/8/armazones", "line": "Armazones"},
+        ],
+        "notes": "Arar Óptica Paraguay. Armazones y lentes.",
+    },
+    {
+        "key": "optica_santalucia",
+        "name": "Óptica Santa Lucía",
+        "mode": "html",
+        "base_url": "https://www.opticasantalucia.com.py",
+        "start_urls": [
+            {"url": "https://www.opticasantalucia.com.py/categoria/armazones", "line": "Armazones"},
+        ],
+        "notes": "Óptica Santa Lucía Paraguay. Lentes recetados.",
+    },
+    {
+        "key": "optimovil",
+        "product_link_regex": ".*/producto/.*",
+        "name": "Optimovil",
+        "mode": "html",
+        "base_url": "https://www.optimovil.com.py",
+        "start_urls": [
+            {"url": "https://www.optimovil.com.py/categoria-producto/armazones/", "line": "Armazones"},
+        ],
+        "notes": "Optimovil Paraguay. Armazones.",
+    },
+    {
+        "key": "infinite_eyewear",
+        "name": "Infinite Eyewear",
+        "mode": "html",
+        "base_url": "https://infiniteyewear.com.py",
+        "start_urls": [
+            {"url": "https://infiniteyewear.com.py/collections/armazones", "line": "Armazones"},
+        ],
+        "notes": "Infinite Eyewear Paraguay. Armazones Shopify.",
+    },
+    {
+        "key": "opticavision",
+        "product_link_regex": ".*/producto/.*",
+        "name": "Óptica Visión",
+        "mode": "html",
+        "base_url": "https://opticavision.com.py",
+        "start_urls": [
+            {"url": "https://opticavision.com.py/product-category/tipos/armazon/", "line": "Armazones"},
+        ],
+        "notes": "Óptica Visión Paraguay. Armazones.",
+    },
+    {
+        "key": "ronan",
+        "name": "Ronan Eyewear",
+        "mode": "html",
+        "base_url": "https://ronan.com.py",
+        "start_urls": [
+            {"url": "https://ronan.com.py/collections/todos", "line": "Lentes"},
+        ],
+        "notes": "Ronan Eyewear Paraguay. Lentes.",
+    },
+    {
+        "key": "valemar",
+        "name": "Valemar",
+        "mode": "html",
+        "base_url": "https://valemar.com.py",
+        "start_urls": [
+            {"url": "https://valemar.com.py/categoria-producto/mujeres/", "line": "Dama"},
+            {"url": "https://valemar.com.py/categoria-producto/hombres/", "line": "Caballero"},
+        ],
+        "notes": "Valemar Paraguay. Armazones.",
+    },
+    # --- Perfumes ---
+    {
+        "key": "punto_tienda",
+        "product_link_regex": ".*/producto/.*",
+        "name": "Punto Tienda",
+        "mode": "html",
+        "base_url": "https://puntotienda.com.py",
+        "start_urls": [
+            {"url": "https://puntotienda.com.py/categoria-producto/perfumes/", "line": "Perfumes"},
+        ],
+        "notes": "Punto Tienda Paraguay. Perfumes originales.",
+    },
+    {
+        "key": "shopping_china_perfumes",
+        "name": "Shopping China Perfumes",
+        "mode": "html",
+        "base_url": "https://www.shoppingchina.com.py",
+        "start_urls": [
+            {"url": "https://www.shoppingchina.com.py/perfumeria", "line": "Perfumes"},
+        ],
+        "notes": "Shopping China Paraguay. Perfumería.",
+    },
+    {
+        "key": "champs",
+        "name": "Champs Elysees",
+        "mode": "html",
+        "base_url": "https://www.champs.com.py",
+        "start_urls": [
+            {"url": "https://www.champs.com.py/categoria/perfumes/", "line": "Perfumes"},
+        ],
+        "notes": "Champs Elysees Paraguay. Perfumes.",
+    },
+    {
+        "key": "lual_perfumeria",
+        "product_link_regex": ".*/producto/.*",
+        "name": "Lual Perfumería",
+        "mode": "html",
+        "base_url": "https://lualperfumeria.com.py",
+        "start_urls": [
+            {"url": "https://lualperfumeria.com.py/product-category/perfumes/", "line": "Perfumes"},
+        ],
+        "notes": "Lual Perfumería Paraguay. Perfumes.",
+    },
+    {
+        "key": "laperfumeria",
+        "product_link_regex": ".*/producto/.*",
+        "name": "La Perfumería",
+        "mode": "html",
+        "base_url": "https://laperfumeria.com.py",
+        "start_urls": [
+            {"url": "https://laperfumeria.com.py/tienda/", "line": "Perfumes"},
+        ],
+        "notes": "La Perfumería Paraguay. Perfumes.",
+    },
 ]
 
 BRAND_BY_KEY = {b["key"]: b for b in BRANDS}
