@@ -76,7 +76,8 @@
   .card-actions .btn-delete:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-bg); }
 
   /* --- WhatsApp floating --- */
-  .whatsapp-float { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; background: #25D366; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,.4); z-index: 500; transition: transform .2s; text-decoration: none; }
+  /* OCULTO a pedido: para reactivar, cambiar display:none por flex en .whatsapp-float */
+  .whatsapp-float { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; background: #25D366; border-radius: 50%; display: none; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,.4); z-index: 500; transition: transform .2s; text-decoration: none; }
   .whatsapp-float:hover { transform: scale(1.1); }
   .whatsapp-float svg { width: 28px; height: 28px; fill: #fff; }
 
