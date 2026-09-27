@@ -89,7 +89,7 @@
         <a href="{{ p.url }}" class="card" target="_blank">
           <div class="card-img">
             {% if p.images %}
-              <img src="{{ p.images[0] }}" alt="{{ p.reference }}">
+              <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
             {% else %}
               <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
             {% endif %}
@@ -113,7 +113,7 @@
         <a href="{{ p.url }}" class="card" target="_blank">
           <div class="card-img">
             {% if p.images %}
-              <img src="{{ p.images[0] }}" alt="{{ p.reference }}">
+              <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
             {% else %}
               <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
             {% endif %}
@@ -137,7 +137,7 @@
         <a href="{{ p.url }}" class="card" target="_blank">
           <div class="card-img">
             {% if p.images %}
-              <img src="{{ p.images[0] }}" alt="{{ p.reference }}">
+              <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
             {% else %}
               <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
             {% endif %}
@@ -161,7 +161,7 @@
         <a href="{{ p.url }}" class="card" target="_blank">
           <div class="card-img">
             {% if p.images %}
-              <img src="{{ p.images[0] }}" alt="{{ p.reference }}">
+              <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
             {% else %}
               <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
             {% endif %}
