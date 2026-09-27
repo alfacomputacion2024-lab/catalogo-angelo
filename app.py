@@ -27,6 +27,7 @@ if "--demo" in sys.argv:
 
 import csv
 import io
+import random
 import re
 import tempfile
 from functools import wraps
@@ -426,6 +427,8 @@ def catalogo():
 @app.route("/client")
 def client_catalog():
     products = db.query_products(status="active")
+    # Orden al azar en cada visita: el catálogo nunca se ve igual («original»).
+    random.shuffle(products)
     brands = db.distinct_values("brand", "active")
     return render_template("client_catalog.html", products=products, brands=brands,
                            theme=json.loads(config.THEME_PATH.read_text(encoding="utf-8")))

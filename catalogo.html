@@ -12,9 +12,20 @@
 <style>
   :root {
     --bg: #0f0f0f; --surface: #1a1a1a; --card: #242424; --border: #333;
-    --text: #f0f0f0; --muted: #888; --accent: #E8A800; --accent-dim: #c08800;
+    --text: #f0f0f0; --muted: #888;
+    /* Amarillo/oro principal — igual que el logo de Angelo */
+    --accent: #F2C544; --accent-dim: #C9A233;
     --danger: #dc2626; --danger-bg: #2a1215; --ok: #22c55e;
   }
+  /* Fondos conmutables: negro (default) · gris · azul oscuro · verde oscuro */
+  :root[data-tema="gris"] { --bg: #17171b; --surface: #1f1f24; --card: #26262c; --border: #38383f; }
+  :root[data-tema="azul"] { --bg: #0a1020; --surface: #101a30; --card: #16223d; --border: #243352; }
+  :root[data-tema="verde"] { --bg: #0a1512; --surface: #10201a; --card: #152a21; --border: #23392f; }
+  /* Selector de tema (esquina inferior derecha) */
+  .temas { position: fixed; right: 14px; bottom: 14px; display: flex; gap: 8px; background: var(--surface); border: 1px solid var(--border); padding: 8px 10px; border-radius: 999px; z-index: 60; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+  .temas button { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; transition: border-color .2s; }
+  .temas button:hover { border-color: var(--muted); }
+  .temas button.sel { border-color: var(--accent); box-shadow: 0 0 6px rgba(242,197,68,.6); }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
@@ -24,8 +35,8 @@
   .header h1 { font-size: 20px; font-weight: 700; color: var(--accent); }
   .header h1 span { color: var(--text); font-weight: 400; }
   .header-actions { display: flex; gap: 10px; align-items: center; }
-  .header-actions a { color: var(--muted); text-decoration: none; font-size: 13px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; transition: all .2s; }
-  .header-actions a:hover { color: var(--text); border-color: var(--accent); }
+  .header-actions a { color: var(--accent); text-decoration: none; font-size: 13px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; transition: all .2s; }
+  .header-actions a:hover { color: #FFE08A; border-color: var(--accent); }
 
   /* --- Search --- */
   .search-bar { padding: 16px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
@@ -38,8 +49,8 @@
   /* --- Brand tabs --- */
   .tabs { display: flex; gap: 0; padding: 0 24px; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .tabs::-webkit-scrollbar { height: 0; }
-  .tab { padding: 12px 20px; font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; transition: all .2s; white-space: nowrap; }
-  .tab:hover { color: var(--text); }
+  .tab { padding: 12px 20px; font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none; border-bottom: 2px solid transparent; transition: all .2s; white-space: nowrap; }
+  .tab:hover { color: #FFE08A; }
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
   .tab .count { background: var(--border); color: var(--muted); font-size: 11px; padding: 1px 6px; border-radius: 99px; margin-left: 6px; }
   .tab.active .count { background: var(--accent-dim); color: #fff; }
@@ -127,6 +138,10 @@
     .grid { grid-template-columns: 1fr; }
   }
 </style>
+<script>
+  /* Aplica el fondo elegido antes de pintar la página (sin parpadeo) */
+  (function(){var t=localStorage.getItem('angelo-tema')||'negro';document.documentElement.setAttribute('data-tema',t);})();
+</script>
 </head>
 <body>
 
@@ -360,6 +375,23 @@ function filterProducts() {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 // Cerrar modal clickeando afuera
 document.getElementById('editModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+</script>
+<!-- Selector de fondo: negro · gris · azul oscuro · verde oscuro -->
+<div class="temas" title="Cambiar color de fondo">
+  <button data-tema="negro" style="background:#0f0f0f" title="Negro" aria-label="Fondo negro"></button>
+  <button data-tema="gris" style="background:#1f1f24" title="Gris" aria-label="Fondo gris"></button>
+  <button data-tema="azul" style="background:#101a30" title="Azul oscuro" aria-label="Fondo azul oscuro"></button>
+  <button data-tema="verde" style="background:#10201a" title="Verde oscuro" aria-label="Fondo verde oscuro"></button>
+</div>
+<script>
+  (function(){
+    var K='angelo-tema';
+    var actual=document.documentElement.getAttribute('data-tema')||'negro';
+    var botones=document.querySelectorAll('.temas button');
+    function marcar(){botones.forEach(function(b){b.classList.toggle('sel',b.dataset.tema===actual)})}
+    marcar();
+    botones.forEach(function(b){b.onclick=function(){actual=b.dataset.tema;document.documentElement.setAttribute('data-tema',actual);localStorage.setItem(K,actual);marcar();}});
+  })();
 </script>
 </body>
 </html>

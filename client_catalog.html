@@ -8,9 +8,19 @@
   <style>
     :root{
       --bg:#0a0a0f; --surface:#12121a; --card:#1a1a24;
-      --border:#2a2a3a; --ink:#e8e8f0; --muted:#6b6b80;
-      --acc:#C8FF00; --acc-dim:#99CC00; --gold:#D4A857;
+      --border:#2a2a3a; --ink:#e8e8f0; --muted:#8a8aa0;
+      /* Amarillo/oro principal — igual que el logo de Angelo */
+      --acc:#F2C544; --acc-dim:#C9A233; --gold:#D4A857;
     }
+    /* Fondos conmutables: negro (default) · gris · azul oscuro · verde oscuro */
+    :root[data-tema="gris"]{ --bg:#17171b; --surface:#1f1f24; --card:#26262c; --border:#38383f; }
+    :root[data-tema="azul"]{ --bg:#0a1020; --surface:#101a30; --card:#16223d; --border:#243352; }
+    :root[data-tema="verde"]{ --bg:#0a1512; --surface:#10201a; --card:#152a21; --border:#23392f; }
+    /* Selector de tema (esquina inferior derecha) */
+    .temas{position:fixed;right:14px;bottom:14px;display:flex;gap:8px;background:var(--surface);border:1px solid var(--border);padding:8px 10px;border-radius:999px;z-index:60;box-shadow:0 6px 18px rgba(0,0,0,.45)}
+    .temas button{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;transition:border-color .2s}
+    .temas button:hover{border-color:var(--muted)}
+    .temas button.sel{border-color:var(--acc);box-shadow:0 0 6px rgba(242,197,68,.6)}
     *{box-sizing:border-box;margin:0;padding:0}
     html{font-size:16px}
     body{
@@ -23,12 +33,12 @@
     .header{
       max-width:1200px;margin:auto;display:flex;justify-content:space-between;align-items:center}
     .logo{
-      display:flex;align-items:center;gap:.5rem}
+      display:flex;align-items:center;gap:.5rem;color:var(--acc);font-weight:700;letter-spacing:.5px}
     .logo svg{
       width:32;height:32;fill:var(--acc)}
     .nav a{
-      color:var(--muted);text-decoration:none;margin-left:1rem;font-size:.9rem}
-    .nav a:hover{color:var(--acc)}
+      color:var(--acc);text-decoration:none;margin-left:1rem;font-size:.9rem}
+    .nav a:hover{color:#FFE08A}
     /* Main */
     main{
       max-width:1200px;padding:2rem;margin:auto}
@@ -64,6 +74,10 @@
     footer{
       padding:2rem;text-align:center;color:var(--muted);font-size:.85rem;border-top:1px solid var(--border)}
   </style>
+  <script>
+    /* Aplica el fondo elegido antes de pintar la página (sin parpadeo) */
+    (function(){var t=localStorage.getItem('angelo-tema')||'negro';document.documentElement.setAttribute('data-tema',t);})();
+  </script>
 </head>
 <body>
 
@@ -181,6 +195,24 @@
 <footer>
   <p>Angelo · @angelo.py · Encarnación, Paraguay</p>
 </footer>
+
+<!-- Selector de fondo: negro · gris · azul oscuro · verde oscuro -->
+<div class="temas" title="Cambiar color de fondo">
+  <button data-tema="negro" style="background:#0a0a0f" title="Negro" aria-label="Fondo negro"></button>
+  <button data-tema="gris" style="background:#1f1f24" title="Gris" aria-label="Fondo gris"></button>
+  <button data-tema="azul" style="background:#101a30" title="Azul oscuro" aria-label="Fondo azul oscuro"></button>
+  <button data-tema="verde" style="background:#10201a" title="Verde oscuro" aria-label="Fondo verde oscuro"></button>
+</div>
+<script>
+  (function(){
+    var K='angelo-tema';
+    var actual=document.documentElement.getAttribute('data-tema')||'negro';
+    var botones=document.querySelectorAll('.temas button');
+    function marcar(){botones.forEach(function(b){b.classList.toggle('sel',b.dataset.tema===actual)})}
+    marcar();
+    botones.forEach(function(b){b.onclick=function(){actual=b.dataset.tema;document.documentElement.setAttribute('data-tema',actual);localStorage.setItem(K,actual);marcar();}});
+  })();
+</script>
 
 </body>
 </html>

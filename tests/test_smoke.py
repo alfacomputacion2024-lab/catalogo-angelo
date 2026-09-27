@@ -42,8 +42,13 @@ r = C.get("/client")
 check("/client público -> 200", r.status_code == 200)
 check("/client no muestra el panel admin", b"Panel Admin" not in r.data)
 check("/client pide las fotos por /img/ (ruta que existe)", b'src="/img/' in r.data)
+check("/client incluye selector de fondo (data-tema)", b'data-tema' in r.data)
+check("/client usa el amarillo principal", b'#F2C544' in r.data)
+check("/client ordena productos al azar (varía entre visitas)",
+      C.get("/client").data != C.get("/client").data)
 r = C.get("/catalogo")
 check("/catalogo público -> 200", r.status_code == 200)
+check("/catalogo usa el amarillo principal", b'#F2C544' in r.data)
 r = C.get("/")
 check("/ sin sesión -> redirect a /login",
       r.status_code == 302 and "/login" in r.headers.get("Location", ""))
