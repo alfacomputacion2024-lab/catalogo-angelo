@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 """Cargar productos de Casa Joia (Citizen, Seiko, Q&Q, Invicta)"""
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))  # raíz del repo
+
 import db
 
 db.init_db()

@@ -2,6 +2,10 @@
 Extractor de productos.
 Orden de lectura en cada ficha: selectores propios > JSON-LD (schema.org) > OpenGraph > HTML.
 """
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))  # raíz del repo
+
 import gzip
 import json
 import re

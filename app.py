@@ -1,7 +1,21 @@
 """
-Panel de revisión del catálogo.
-   python app.py            -> abre http://127.0.0.1:5000
-   python app.py --demo     -> usa datos de ejemplo (data_demo/), sin tocar tu base real
+Catálogo Angelo — servidor Flask: catálogo online + panel de administración.
+
+Rutas principales
+    /             Panel admin (requiere login)
+    /catalogo     Catálogo online con edición (login para editar/eliminar)
+    /client       Catálogo SOLO-LECTURA para clientes y revendedores (público)
+    /login        Acceso (roles: admin y socio)
+    /agregar      Alta manual de productos con fotos (login)
+    /pdf          Generación de PDFs por marca (login)
+    /img/<ruta>   Fotos del catálogo desde data/imagenes (proxy para URL remotas)
+    /static/<r>   Solo imágenes de marca (logos/favicon); NUNCA sirve código ni base
+
+Uso local
+    python app.py            -> http://127.0.0.1:5000
+    python app.py --demo     -> datos de ejemplo (data_demo/), sin tocar la base real
+
+Variables de entorno opcionales (producción): SECRET_KEY, ADMIN_PASSWORD, SOCIO_PASSWORD.
 """
 import json
 import os
@@ -15,13 +29,17 @@ import csv
 import io
 import re
 import tempfile
+from functools import wraps
 
-from flask import (Flask, Response, flash, jsonify, redirect, render_template,
-                   request, send_file, send_from_directory, session, url_for)
+from flask import (Flask, Response, abort, flash, jsonify, redirect,
+                   render_template, request, send_file, send_from_directory,
+                   session, url_for)
 
 import config
 import db
 from pdf_catalog import build_pdf
+
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def parse_price(value):
@@ -49,13 +67,16 @@ def parse_price(value):
 
 # Plantillas: en producción (repo plano) están en la raíz; en desarrollo local
 # viven en templates/. Detectamos cuál de las dos exista.
-_TPL_DIR = 'templates' if os.path.isdir(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')) else '.'
-app = Flask(__name__, 
+_TPL_DIR = 'templates' if os.path.isdir(os.path.join(_BASE_DIR, 'templates')) else '.'
+
+# static_folder=None apaga la ruta /static automática de Flask: los archivos se
+# sirven con la allowlist estricta de static_files() (solo imágenes, nunca
+# código ni la base .db).
+app = Flask(__name__,
             template_folder=_TPL_DIR,
-            static_folder='.',
+            static_folder=None,
             static_url_path='/static')
-app.secret_key = "catalogo-relojes-2026"
+app.secret_key = os.environ.get("SECRET_KEY", "catalogo-relojes-2026")
 
 def short_brand(name):
     """Acorta nombres largos: 'Tiempo de Relojes (Casio)' -> 'Casio'"""
@@ -75,7 +96,7 @@ MARCAS_RELOJ = {
     "Curren", "Skmei", "Invicta", "NaviForce", "Hummer", "Seiko", "Tissot",
     "Victorinox", "Citizen", "Orient", "Anne Klein", "Adidas", "G-Shock",
     "Edifice", "Baby-G", "ProTrek", "Casper", "Winner", "Skagen", "Obaku",
-    "Michael Kors", "Guess", "Emporio Armani", "Dkny", "Coach", "Kate Spade",
+    "Guess", "Emporio Armani", "Dkny", "Coach", "Kate Spade",
     "Versace", "Valentino", "Calvin", "Replay", "Scuderia", "Lotus", "Ice",
     "Qaza", "Alexandre", "Tissot PRX",
 }
@@ -147,16 +168,17 @@ def header_pills():
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 db.init_db()
 
-# --- Usuarios del sistema (editar con tus datos reales) ---
+# --- Usuarios del sistema (contraseñas por variable de entorno en producción) ---
 USUARIOS = {
-    "admin@mitienda.com.py": {"password": "admin123", "nombre": "Admin", "rol": "admin"},
-    "socio@mitienda.com.py": {"password": "socio123", "nombre": "Socio", "rol": "editor"},
+    "admin@mitienda.com.py": {"password": os.environ.get("ADMIN_PASSWORD", "admin123"),
+                              "nombre": "Admin", "rol": "admin"},
+    "socio@mitienda.com.py": {"password": os.environ.get("SOCIO_PASSWORD", "socio123"),
+                              "nombre": "Socio", "rol": "editor"},
 }
 
 
 def login_requerido(f):
-    """Decorador: exige login para rutas protegidas."""
-    from functools import wraps
+    """Decorador: exige login para rutas protegidas (panel y acciones)."""
     @wraps(f)
     def decorated(*args, **kwargs):
         if "usuario" not in session:
@@ -165,7 +187,18 @@ def login_requerido(f):
     return decorated
 
 
+def api_login_requerido(f):
+    """Decorador de API: responde 401 JSON (nunca redirect) si no hay sesión."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "usuario" not in session:
+            return jsonify({"error": "login requerido"}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
 def back():
+    """Vuelve a la página anterior del panel (query string en 'back')."""
     qs = request.form.get("back", "")
     return redirect(url_for("index") + (("?" + qs) if qs else ""))
 
@@ -195,7 +228,9 @@ def logout():
 
 
 @app.route("/")
+@login_requerido
 def index():
+    """Panel admin (protegido). Los visitantes sin sesión caen en /login."""
     f = {k: request.args.get(k, "") for k in ("brand", "line", "gender", "q")}
     status = request.args.get("status", "active")
     page = request.args.get("page", 1, type=int)
@@ -248,10 +283,20 @@ def img(p):
 
 @app.route("/static/<path:p>")
 def static_files(p):
-    return send_from_directory(".", p)
+    """Solo sirve archivos de IMAGEN (logos, favicon). El resto del repo —
+    base catalogo.db, código .py, etc.— jamás sale por HTTP."""
+    if ".." in p or not re.search(r"\.(png|jpe?g|gif|webp|svg|ico)$", p, re.I):
+        abort(404)
+    if not os.path.isfile(os.path.join(_BASE_DIR, p)):
+        abort(404)
+    return send_from_directory(_BASE_DIR, p)
 
 
+# =============================================================================
+# Acciones masivas del panel (todas requieren login)
+# =============================================================================
 @app.post("/accion")
+@login_requerido
 def accion():
     ids = request.form.getlist("ids", type=int)
     action = request.form.get("action")
@@ -265,6 +310,7 @@ def accion():
 
 
 @app.post("/precios")
+@login_requerido
 def precios():
     prices = {}
     for key, val in request.form.items():
@@ -276,6 +322,7 @@ def precios():
 
 
 @app.post("/stock")
+@login_requerido
 def stock():
     refs = [r for r in re.split(r"[\s,;]+", request.form.get("refs", "")) if r]
     if not refs:
@@ -288,6 +335,7 @@ def stock():
 
 
 @app.post("/eliminar_marca")
+@login_requerido
 def eliminar_marca():
     brand = request.form.get("brand")
     if brand:
@@ -296,6 +344,7 @@ def eliminar_marca():
 
 
 @app.route("/pdf", methods=["GET", "POST"])
+@login_requerido
 def pdf():
     if request.method == "GET":
         return redirect(url_for("index"))
@@ -328,6 +377,7 @@ def pdf():
 
 
 @app.route("/exportar.csv")
+@login_requerido
 def exportar():
     out = io.StringIO()
     w = csv.writer(out)
@@ -428,9 +478,10 @@ def agregar():
 
 
 # =============================================================================
-# API REST para gestionar productos desde el catálogo online
+# API REST para gestionar productos desde el catálogo online (requiere login)
 # =============================================================================
 @app.route("/api/producto/<int:pid>", methods=["PUT"])
+@api_login_requerido
 def api_update_producto(pid):
     data = request.get_json(force=True)
     allowed = {"name", "line", "gender", "description", "sell_price"}
@@ -447,6 +498,7 @@ def api_update_producto(pid):
 
 
 @app.route("/api/producto/<int:pid>", methods=["DELETE"])
+@api_login_requerido
 def api_delete_producto(pid):
     with db.get_conn() as conn:
         cur = conn.execute("UPDATE products SET status='deleted' WHERE id=? AND status='active'", (pid,))
@@ -456,6 +508,7 @@ def api_delete_producto(pid):
 
 
 @app.route("/api/producto/<int:pid>/restaurar", methods=["POST"])
+@api_login_requerido
 def api_restore_producto(pid):
     with db.get_conn() as conn:
         cur = conn.execute("UPDATE products SET status='active' WHERE id=? AND status='deleted'", (pid,))
@@ -466,8 +519,7 @@ def api_restore_producto(pid):
 
 if __name__ == "__main__":
     import socket
-    import os
-    
+
     port = int(os.environ.get("PORT", 5000))
     hostname = socket.gethostname()
     try:

@@ -597,7 +597,7 @@ BRANDS = [
     # --- Tiendas paraguayas de relojes (agregadas) ---
     {
         "key": "casa_joia",
-        "product_link_regex": ".*/product\-page/.*",
+        "product_link_regex": r".*/product-page/.*",
         "name": "Casa Joia",
         "mode": "html",
         "base_url": "https://www.casajoia.com.py",
@@ -626,7 +626,7 @@ BRANDS = [
     },
     {
         "key": "joyeria_gya",
-        "product_link_regex": ".*/reloj\-.*",
+        "product_link_regex": r".*/reloj-.*",
         "name": "Joyería G&A",
         "mode": "html",
         "base_url": "https://joyeriagya.com",
@@ -644,7 +644,7 @@ BRANDS = [
     },
     {
         "key": "tienda_naranja",
-        "product_link_regex": ".*\.html.*",
+        "product_link_regex": r".*\.html.*",
         "name": "Tienda Naranja",
         "mode": "html",
         "base_url": "https://tiendanaranja.com.py",

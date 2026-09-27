@@ -8,6 +8,10 @@ Uso:
   python run_scrape.py --manual                               fichas de urls_manuales.txt
 Opciones: --sin-imagenes  --refrescar
 """
+import os as _os
+import sys as _sys
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))  # raíz del repo
+
 import argparse
 import sys
 
