@@ -21,6 +21,17 @@
     .temas button{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;transition:border-color .2s}
     .temas button:hover{border-color:var(--muted)}
     .temas button.sel{border-color:var(--acc);box-shadow:0 0 6px rgba(242,197,68,.6)}
+    /* Buscador + filtro de marcas (barra pegajosa arriba) */
+    .filtros{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--border);padding:.7rem 1.2rem}
+    .filtros .inner{max-width:1200px;margin:auto;display:flex;flex-direction:column;gap:.6rem}
+    #buscador{width:100%;padding:.65rem 1rem;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--ink);font:inherit;outline:none}
+    #buscador:focus{border-color:var(--acc)}
+    .pills-row{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
+    .pills{display:flex;flex-wrap:wrap;gap:.45rem}
+    .pill{border:1px solid var(--border);background:transparent;color:var(--acc);border-radius:999px;padding:.3rem .8rem;font-size:.8rem;cursor:pointer;transition:all .2s}
+    .pill:hover{border-color:var(--acc);color:#FFE08A}
+    .pill.sel{background:var(--acc);color:#111;font-weight:700}
+    .contador{font-size:.78rem;color:var(--muted);white-space:nowrap}
     *{box-sizing:border-box;margin:0;padding:0}
     html{font-size:16px}
     body{
@@ -81,26 +92,43 @@
 </head>
 <body>
 
-<header>
+<header id="top">
   <div class="header">
     <div class="logo">
       <svg viewBox="0 0 24 24"><path d="M12 2L2 7h3v10H2V7zm8 4H7v10h10V7zm-9 8c.83 0 1.5-.67 1.5-1.5S8.83 5 8 5S6.5 5.67 6.5 6.5 6.5 8 6.5 8Zm0 2C5.13 8 3 10.13 3 12s2.13 4 5 4 5-2.13 5-4-2.13-5-5-4Z"/></svg>
       Angelo
     </div>
     <nav class="nav">
-      <a href="/client">Inicio</a>
-      <a href="/client">Catálogo</a>
+      <a href="#top">Inicio</a>
+      <a href="#catalogo">Catálogo</a>
     </nav>
   </div>
 </header>
 
-<main>
+<!-- Buscador + filtro por marca: filtra al instante en el navegador -->
+<div class="filtros">
+  <div class="inner">
+    <input id="buscador" type="search" placeholder="🔍 Buscar por referencia, nombre o marca…" autocomplete="off">
+    <div class="pills-row">
+      <div class="pills">
+        <button type="button" class="pill sel" data-marca="">Todas</button>
+        {% for m in brands|sort %}
+        <button type="button" class="pill" data-marca="{{ m }}">{{ m }}</button>
+        {% endfor %}
+      </div>
+      <div id="contador" class="contador"></div>
+    </div>
+  </div>
+</div>
+
+<main id="catalogo">
+  <div id="vacio" class="empty" style="display:none">Sin resultados — probá con otra referencia o marca.</div>
   <section class="brand" id="casio">
     <h2 class="brand-header">Casio</h2>
     <div class="grid">
       {% for p in products %}
         {% if p.brand == 'Casio' %}
-        <a href="{{ p.url }}" class="card" target="_blank">
+        <a href="{{ p.url }}" class="card" target="_blank" data-brand="{{ p.brand }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ p.brand)|lower }}">
           <div class="card-img">
             {% if p.images %}
               <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
@@ -124,7 +152,7 @@
     <div class="grid">
       {% for p in products %}
         {% if p.brand == 'AM Relojes' %}
-        <a href="{{ p.url }}" class="card" target="_blank">
+        <a href="{{ p.url }}" class="card" target="_blank" data-brand="{{ p.brand }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ p.brand)|lower }}">
           <div class="card-img">
             {% if p.images %}
               <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
@@ -148,7 +176,7 @@
     <div class="grid">
       {% for p in products %}
         {% if p.brand == 'Jean Vernier' %}
-        <a href="{{ p.url }}" class="card" target="_blank">
+        <a href="{{ p.url }}" class="card" target="_blank" data-brand="{{ p.brand }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ p.brand)|lower }}">
           <div class="card-img">
             {% if p.images %}
               <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
@@ -172,7 +200,7 @@
     <div class="grid">
       {% for p in products %}
         {% if p.brand not in ['Casio', 'AM Relojes', 'Jean Vernier'] %}
-        <a href="{{ p.url }}" class="card" target="_blank">
+        <a href="{{ p.url }}" class="card" target="_blank" data-brand="{{ p.brand }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ p.brand)|lower }}">
           <div class="card-img">
             {% if p.images %}
               <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
@@ -211,6 +239,40 @@
     function marcar(){botones.forEach(function(b){b.classList.toggle('sel',b.dataset.tema===actual)})}
     marcar();
     botones.forEach(function(b){b.onclick=function(){actual=b.dataset.tema;document.documentElement.setAttribute('data-tema',actual);localStorage.setItem(K,actual);marcar();}});
+  })();
+</script>
+<script>
+  /* Buscador + filtro por marca: todo en el navegador, al instante */
+  (function(){
+    var cards=[].slice.call(document.querySelectorAll('.card'));
+    var secciones=[].slice.call(document.querySelectorAll('section.brand'));
+    var buscador=document.getElementById('buscador');
+    var contador=document.getElementById('contador');
+    var vacio=document.getElementById('vacio');
+    var pills=[].slice.call(document.querySelectorAll('.pill'));
+    var marca='';
+    function aplicar(){
+      var q=(buscador.value||'').toLowerCase().trim();
+      var vis=0;
+      cards.forEach(function(c){
+        var ok=(!marca||c.dataset.brand===marca)&&(!q||c.dataset.busqueda.indexOf(q)>=0);
+        c.style.display=ok?'':'none';
+        if(ok)vis++;
+      });
+      secciones.forEach(function(s){
+        var hay=[].some.call(s.querySelectorAll('.card'),function(c){return c.style.display!=='none'});
+        s.style.display=hay?'':'none';
+      });
+      contador.textContent=vis+' '+(vis===1?'producto':'productos');
+      vacio.style.display=vis?'none':'';
+    }
+    pills.forEach(function(b){b.onclick=function(){
+      marca=b.dataset.marca;
+      pills.forEach(function(x){x.classList.toggle('sel',x===b)});
+      aplicar();
+    }});
+    buscador.addEventListener('input',aplicar);
+    aplicar();
   })();
 </script>
 

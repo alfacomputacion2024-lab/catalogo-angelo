@@ -46,6 +46,11 @@ check("/client incluye selector de fondo (data-tema)", b'data-tema' in r.data)
 check("/client usa el amarillo principal", b'#F2C544' in r.data)
 check("/client ordena productos al azar (varía entre visitas)",
       C.get("/client").data != C.get("/client").data)
+r = C.get("/client")
+check("/client tiene buscador y filtro de marcas",
+      b'id="buscador"' in r.data and b'data-marca=' in r.data)
+check("/client menu con anclas reales (Inicio/Catálogo)",
+      b'href="#top"' in r.data and b'href="#catalogo"' in r.data)
 r = C.get("/catalogo")
 check("/catalogo público -> 200", r.status_code == 200)
 check("/catalogo usa el amarillo principal", b'#F2C544' in r.data)
