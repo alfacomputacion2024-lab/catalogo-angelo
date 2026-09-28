@@ -13,12 +13,12 @@
       --acc:#F2C544; --acc-dim:#C9A233; --gold:#D4A857;
     }
     /* Fondos conmutables: negro (default) · gris · azul oscuro · verde oscuro */
-    :root[data-tema="gris"]{ --bg:#17171b; --surface:#1f1f24; --card:#26262c; --border:#38383f; }
+    :root[data-tema="gris"]{ --bg:#1e1e24; --surface:#282830; --card:#33333c; --border:#4b4b56; }
     :root[data-tema="azul"]{ --bg:#0a1020; --surface:#101a30; --card:#16223d; --border:#243352; }
     :root[data-tema="verde"]{ --bg:#0a1512; --surface:#10201a; --card:#152a21; --border:#23392f; }
     /* Selector de tema (esquina inferior derecha) */
     .temas{position:fixed;right:14px;bottom:14px;display:flex;gap:8px;background:var(--surface);border:1px solid var(--border);padding:8px 10px;border-radius:999px;z-index:60;box-shadow:0 6px 18px rgba(0,0,0,.45)}
-    .temas button{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;transition:border-color .2s}
+    .temas button{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.32);cursor:pointer;padding:0;transition:border-color .2s}
     .temas button:hover{border-color:var(--muted)}
     .temas button.sel{border-color:var(--acc);box-shadow:0 0 6px rgba(242,197,68,.6)}
     /* Buscador + filtro de marcas (barra pegajosa arriba) */
@@ -33,7 +33,7 @@
     .pill.sel{background:var(--acc);color:#111;font-weight:700}
     .contador{font-size:.78rem;color:var(--muted);white-space:nowrap}
     *{box-sizing:border-box;margin:0;padding:0}
-    html{font-size:16px}
+    html{font-size:16px;scroll-behavior:smooth}
     body{
       font:400 1rem/1.6 'Segoe UI',system-ui,sans-serif;
       background:var(--bg);color:var(--ink);min-height:100vh
@@ -52,7 +52,7 @@
     .nav a:hover{color:#FFE08A}
     /* Main */
     main{
-      max-width:1200px;padding:2rem;margin:auto}
+      max-width:1200px;padding:2rem;margin:auto;scroll-margin-top:120px}
     .section{
       margin-bottom:2rem}
     .brand-header{
@@ -63,6 +63,13 @@
       display:grid;gap:1.5rem}
     @media(min-width:768px){.grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}}
     @media(min-width:1200px){.grid{grid-template-columns:repeat(4,1fr)}}
+    /* Teléfono: las marcas en UNA fila deslizable (antes enrolladas tapaban media pantalla) */
+    @media(max-width:768px){
+      .pills-row{flex-wrap:nowrap}
+      .pills{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}
+      .contador{display:none}
+      .filtros{padding:.6rem .9rem}
+    }
     /* Card */
     .card{
       background:var(--card);border-radius:12px;padding:1.5rem;text-decoration:none;color:var(--ink);
@@ -154,10 +161,10 @@
 
 <!-- Selector de fondo: negro · gris · azul oscuro · verde oscuro -->
 <div class="temas" title="Cambiar color de fondo">
-  <button data-tema="negro" style="background:#0a0a0f" title="Negro" aria-label="Fondo negro"></button>
-  <button data-tema="gris" style="background:#1f1f24" title="Gris" aria-label="Fondo gris"></button>
-  <button data-tema="azul" style="background:#101a30" title="Azul oscuro" aria-label="Fondo azul oscuro"></button>
-  <button data-tema="verde" style="background:#10201a" title="Verde oscuro" aria-label="Fondo verde oscuro"></button>
+  <button data-tema="negro" style="background:#141414" title="Negro" aria-label="Fondo negro"></button>
+  <button data-tema="gris" style="background:#8b8b95" title="Gris" aria-label="Fondo gris"></button>
+  <button data-tema="azul" style="background:#3f6fe0" title="Azul oscuro" aria-label="Fondo azul oscuro"></button>
+  <button data-tema="verde" style="background:#2fa46f" title="Verde oscuro" aria-label="Fondo verde oscuro"></button>
 </div>
 <script>
   (function(){
