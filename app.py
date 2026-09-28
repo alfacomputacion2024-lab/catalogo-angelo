@@ -28,6 +28,7 @@ if "--demo" in sys.argv:
 import csv
 import io
 import re
+import sqlite3
 import tempfile
 from functools import wraps
 from urllib.parse import urlencode
@@ -326,6 +327,33 @@ def exportar():
                     p["price"], p["description"], (p["images"] or [""])[0], p["url"]])
     return Response("\ufeff" + out.getvalue(), mimetype="text/csv",
                     headers={"Content-Disposition": "attachment; filename=catalogo.csv"})
+
+
+@app.route("/backup.db")
+@login_requerido
+def backup_db():
+    """Copia íntegra de catalogo.db (precios, ediciones, bajas y estados).
+    La usa tools/rescatar_produccion.py ANTES de cada despliegue: en Render el
+    servidor se restaura desde el repositorio en cada deploy."""
+    buf = io.BytesIO()
+    tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    tmp.close()
+    try:
+        src = sqlite3.connect(config.DB_PATH)
+        dst = sqlite3.connect(tmp.name)
+        src.backup(dst)          # instantánea consistente de la base
+        dst.close()
+        src.close()
+        with open(tmp.name, "rb") as f:
+            buf.write(f.read())
+    finally:
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
+    buf.seek(0)
+    return send_file(buf, mimetype="application/x-sqlite3",
+                     as_attachment=True, download_name="catalogo_backup.db")
 
 
 # =============================================================================

@@ -101,13 +101,16 @@ python tests/test_smoke.py   # prueba de humo (21 checks)
 
 ## 5. Cómo se publican los cambios (Render)
 
-> **⚠️ Antes de CADA despliegue: rescatar los precios.** Render restaura `catalogo.db`
-> desde el repositorio en cada deploy, así que lo que el cliente cargue en el panel
-> (precios) vive solo hasta el próximo despliegue. Correr desde la raíz del repo:
+> **⚠️ Antes de CADA despliegue: rescatar producción.** Render restaura `catalogo.db`
+> y `data/` desde el repositorio en cada deploy, así que los precios, ediciones, bajas
+> y fotos cargados en el panel viven solo hasta el próximo despliegue. Correr desde la
+> raíz del repo:
 > ```powershell
-> python tools/rescatar_precios.py --aplicar    # baja los precios del servidor al repo
+> python tools/rescatar_produccion.py    # baja la base íntegra (/backup.db) + fotos faltantes
+> python tests/test_smoke.py             # verificar que todo sigue en pie
 > ```
-> y sumar `catalogo.db` al commit. Sin ese paso, los precios cargados en producción se pierden.
+> y sumar `catalogo.db` (y `data/imagenes/` si hubo fotos nuevas) al commit. Sin ese
+> paso, lo cargado en producción se pierde.
 
 1. Subir el cambio a GitHub (rama `main`).
 2. Disparar el **deploy hook** (URL secreta guardada en la PC del administrador):

@@ -81,6 +81,7 @@ check("/accion POST sin sesión -> bloqueado",
 check("/precios POST sin sesión -> bloqueado",
       C.post("/precios", data={"price_1": "1"}).status_code == 302)
 check("/pdf POST sin sesión -> bloqueado", C.post("/pdf", data={}).status_code == 302)
+check("/backup.db sin sesión -> bloqueado", C.get("/backup.db").status_code == 302)
 check("API PUT sin sesión -> 401",
       C.put("/api/producto/1", json={"name": "x"}).status_code == 401)
 check("API DELETE sin sesión -> 401",
@@ -120,6 +121,9 @@ s_agr = r.data.decode("utf-8")
 check("/agregar: datalist de marcas sin nombres de tienda",
       r.status_code == 200 and "Joyería Domínguez" not in s_panel
       and "Joyería Domínguez" not in s_agr and "Casio" in s_agr)
+r = C.get("/backup.db")
+check("/backup.db con sesión -> SQLite íntegro (rescate)",
+      r.status_code == 200 and r.data[:16] == b"SQLite format 3\x00")
 check("API PUT con sesión pasa la auth (404 = id inexistente)",
       C.put("/api/producto/99999999", json={"name": "x"}).status_code == 404)
 C.get("/logout")
