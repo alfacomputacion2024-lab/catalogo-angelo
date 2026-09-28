@@ -20,6 +20,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from app import app  # noqa: E402
 from app import watch_brand  # noqa: E402
+import respaldo  # noqa: E402
 
 C = app.test_client()
 ok = fail = 0
@@ -137,6 +138,10 @@ C.get("/logout")
 print("— credenciales incorrectas —")
 r = login("admin@mitienda.com.py", "esta-no-es")
 check("contraseña incorrecta rechazada", b"incorrect" in r.data.lower())
+
+print("— respaldo automático (inerte sin token) —")
+check("respaldo.restaurar() no rompe sin token", respaldo.restaurar() is None)
+check("respaldo.respaldar() no rompe sin token", respaldo.respaldar() is None)
 
 print(f"\nRESULTADO: {ok} OK / {fail} FAIL")
 sys.exit(1 if fail else 0)

@@ -22,6 +22,7 @@ Sistema completo para la joyería **Angelo** (Encarnación, Paraguay):
 | `app.py` | **Servidor principal (Flask)**. Todas las rutas: panel, catálogos, login, PDF, APIs, fotos. |
 | `marcas.py` | **Marca real por producto** (nunca la tienda de origen): `watch_brand()` + listas de marcas/tiendas. Lo comparten `app.py` y `db.py`. |
 | `db.py` | Acceso a la base SQLite (`catalogo.db`): crear, consultar, editar productos. |
+| `respaldo.py` | **Persistencia en Render**: tras cada carga del panel sube `catalogo.db` y las fotos nuevas a la rama `respaldos` de GitHub, y al arrancar restaura si ese respaldo es más nuevo (ver §5). |
 | `config.py` | Configuración general: rutas, marcas de scraping, límites, usuario-agente. |
 | `images.py` | Descarga, recorte y optimización de fotos (JPEG, máx. 1200 px). |
 | `pdf_catalog.py` | Generador de PDFs (reportlab): portada, grilla, marca de agua, precios. |
@@ -74,6 +75,7 @@ Uso: `python tools/run_scrape.py --list` (desde la raíz del repo).
 | `/login` | Público | Acceso (admin y socio) |
 | `/` | **Login** | Panel de administración |
 | `/agregar` | **Login** | Alta manual de productos con fotos |
+| `/backup.db` | **Login** | Copia íntegra de la base (para `tools/rescatar_produccion.py` antes de desplegar) |
 | `/pdf` | **Login** | Generación de PDFs por marca |
 | `/img/<ruta>` | Público | Fotos desde `data/imagenes/` (proxy para URL remotas) |
 | `/static/<ruta>` | Público | **Solo imágenes** (logos/favicon). Código y `.db` responden 404. |
@@ -94,23 +96,35 @@ En producción se pueden cambiar sin tocar código con las variables `ADMIN_PASS
 ```bash
 pip install -r requirements.txt
 python app.py                # http://127.0.0.1:5000
-python tests/test_smoke.py   # prueba de humo (21 checks)
+python tests/test_smoke.py   # prueba de humo (41 checks)
 ```
 
 ---
 
 ## 5. Cómo se publican los cambios (Render)
 
-> **⚠️ Antes de CADA despliegue: rescatar producción.** Render restaura `catalogo.db`
-> y `data/` desde el repositorio en cada deploy, así que los precios, ediciones, bajas
-> y fotos cargados en el panel viven solo hasta el próximo despliegue. Correr desde la
-> raíz del repo:
-> ```powershell
-> python tools/rescatar_produccion.py    # baja la base íntegra (/backup.db) + fotos faltantes
-> python tests/test_smoke.py             # verificar que todo sigue en pie
-> ```
-> y sumar `catalogo.db` (y `data/imagenes/` si hubo fotos nuevas) al commit. Sin ese
-> paso, lo cargado en producción se pierde.
+> **⚠️ Dónde viven los datos en Render (verificado con pruebas 27/09/2026):**
+>
+> - **Dormir SÍ borra** (comprobado): si el sitio queda ~15 min sin visitas, Render lo
+>   duerme y al reactivarlo restaura el filesystem del último deploy, de modo que los
+>   precios, ediciones, bajas y fotos cargados en el panel **se perdían**.
+> - **Respaldo automático (`respaldo.py`)** — la solución activa: cada carga en el panel
+>   sube `catalogo.db` (y las fotos nuevas, registradas en `data/respaldo_fotos.json`) a
+>   la rama **`respaldos`**; al arrancar, si ese respaldo es más nuevo que la base local,
+>   se restaura (la base síncronamente y las fotos en segundo plano). Requiere la variable
+>   de entorno **`RESPALDO_GITHUB_TOKEN`** en Render (token con permiso `repo`). La rama
+>   `respaldos` está separada de `main`: sus commits nunca disparan despliegues.
+> - **Desplegar NO borró** (comprobado), pero como seguro, antes de CADA despliegue correr
+>   desde la raíz del repo:
+>   ```powershell
+>   python tools/rescatar_produccion.py    # baja la base íntegra (/backup.db) + fotos faltantes
+>   python tests/test_smoke.py             # verificar que todo sigue en pie
+>   ```
+>   y sumar `catalogo.db` (y `data/imagenes/` si hubo fotos nuevas) al commit.
+> - **Opcional — que nunca duerma**: `.github/workflows/keepalive.yml` visita el sitio
+>   cada 5 min (aún no está publicado: subir archivos de workflow exige un token con el
+>   permiso `workflow`, que el token actual no tiene).
+> - **Solución definitiva**: migrar a Hostinger (§6), donde los archivos persisten siempre.
 
 1. Subir el cambio a GitHub (rama `main`).
 2. Disparar el **deploy hook** (URL secreta guardada en la PC del administrador):
@@ -148,7 +162,7 @@ Pasos generales:
 - Panel, PDF, CSV y acciones masivas **requieren login**; APIs responden **401 sin sesión**.
 - `/static` solo entrega **imágenes** — la base `catalogo.db` y el código `.py` responden 404.
 - `/client` nunca muestra precios ni controles de administración.
-- `tests/test_smoke.py` verifica todo lo anterior (21 checks).
+- `tests/test_smoke.py` verifica todo lo anterior (41 checks).
 
 ## 8. Cómo extender el catálogo
 

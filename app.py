@@ -39,6 +39,7 @@ from flask import (Flask, Response, abort, flash, jsonify, redirect,
 
 import config
 import db
+import respaldo
 from marcas import short_brand, watch_brand
 from pdf_catalog import build_pdf
 
@@ -98,6 +99,7 @@ def header_pills():
 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 db.init_db()
+respaldo.restaurar()   # si GitHub tiene un respaldo más nuevo, restaurar (Render borra al dormir)
 
 # --- Usuarios del sistema (contraseñas por variable de entorno en producción) ---
 USUARIOS = {
@@ -241,9 +243,13 @@ def accion():
     if not ids:
         flash("No seleccionaste ningún producto.", "warn")
     elif action == "delete":
-        flash(f"{db.set_status(ids, 'deleted')} productos eliminados del catálogo (se pueden restaurar).", "ok")
+        n = db.set_status(ids, 'deleted')
+        respaldo.respaldar()
+        flash(f"{n} productos eliminados del catálogo (se pueden restaurar).", "ok")
     elif action == "restore":
-        flash(f"{db.set_status(ids, 'active')} productos restaurados.", "ok")
+        n = db.set_status(ids, 'active')
+        respaldo.respaldar()
+        flash(f"{n} productos restaurados.", "ok")
     return back()
 
 
@@ -255,6 +261,7 @@ def precios():
         if key.startswith("price_"):
             prices[int(key[6:])] = parse_price(val) if val.strip() else None
     db.update_sell_prices(prices)
+    respaldo.respaldar()
     flash("Precios de venta guardados.", "ok")
     return back()
 
@@ -268,6 +275,8 @@ def stock():
         return back()
     removed = db.keep_only_references(refs, partial=bool(request.form.get("partial")),
                                       marca=request.form.get("brand") or None)
+    if removed:
+        respaldo.respaldar()
     flash(f"Listo: se quitaron {removed} productos que no están en tu stock.", "ok")
     return back()
 
@@ -277,7 +286,10 @@ def stock():
 def eliminar_marca():
     brand = request.form.get("brand")
     if brand:
-        flash(f"{db.delete_brand(marca=brand)} productos de {brand} eliminados.", "ok")
+        n = db.delete_brand(marca=brand)
+        if n:
+            respaldo.respaldar()
+        flash(f"{n} productos de {brand} eliminados.", "ok")
     return back()
 
 
@@ -451,6 +463,7 @@ def agregar():
             "specs": {}, "price": price, "sell_price": sell_price,
             "currency": "USD", "url": url_origen, "images": images,
         })
+        respaldo.respaldar(imagenes=images)
         flash(f"✅ {brand} {reference} agregado correctamente.", "ok")
         return redirect(url_for("agregar"))
 
@@ -474,6 +487,7 @@ def api_update_producto(pid):
         cur = conn.execute(f"UPDATE products SET {sets} WHERE id=?", vals)
         if cur.rowcount == 0:
             return jsonify({"error": "Producto no encontrado"}), 404
+    respaldo.respaldar()
     return jsonify({"ok": True, "id": pid, "updated": list(updates.keys())})
 
 
@@ -484,6 +498,7 @@ def api_delete_producto(pid):
         cur = conn.execute("UPDATE products SET status='deleted' WHERE id=? AND status='active'", (pid,))
         if cur.rowcount == 0:
             return jsonify({"error": "Producto no encontrado o ya eliminado"}), 404
+    respaldo.respaldar()
     return jsonify({"ok": True, "id": pid})
 
 
@@ -494,6 +509,7 @@ def api_restore_producto(pid):
         cur = conn.execute("UPDATE products SET status='active' WHERE id=? AND status='deleted'", (pid,))
         if cur.rowcount == 0:
             return jsonify({"error": "Producto no encontrado o ya activo"}), 404
+    respaldo.respaldar()
     return jsonify({"ok": True, "id": pid})
 
 
