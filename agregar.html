@@ -76,9 +76,6 @@
           <input list="brands-list" name="brand" value="{{ form.get('brand', '') }}" placeholder="Casio, Tommy, Tissot..." required>
           <datalist id="brands-list">
             {% for b in brands %}<option value="{{ b }}">{% endfor %}
-            <option value="Joyería Domínguez (Relojes)">
-            <option value="Joyería Domínguez (Joyería)">
-            <option value="Joyería Domínguez (Accesorios)">
           </datalist>
         </label>
         <label>Referencia *

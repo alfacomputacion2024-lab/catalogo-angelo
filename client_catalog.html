@@ -112,7 +112,7 @@
     <div class="pills-row">
       <div class="pills">
         <button type="button" class="pill sel" data-marca="">Todas</button>
-        {% for m in brands|sort %}
+        {% for m in marcas %}
         <button type="button" class="pill" data-marca="{{ m }}">{{ m }}</button>
         {% endfor %}
       </div>
@@ -123,101 +123,29 @@
 
 <main id="catalogo">
   <div id="vacio" class="empty" style="display:none">Sin resultados — probá con otra referencia o marca.</div>
-  <section class="brand" id="casio">
-    <h2 class="brand-header">Casio</h2>
+  {% for marca, items in grupos.items() %}
+  <section class="brand">
+    <h2 class="brand-header">{{ marca }}</h2>
     <div class="grid">
-      {% for p in products %}
-        {% if p.brand == 'Casio' %}
-        <a href="{{ p.url }}" class="card" target="_blank" data-brand="{{ p.brand }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ p.brand)|lower }}">
-          <div class="card-img">
-            {% if p.images %}
-              <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
-            {% else %}
-              <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
-            {% endif %}
-          </div>
-          <div class="card-body">
-            <div class="ref">{{ p.reference }}</div>
-            <div class="name">{{ p.name|upper }}</div>
-            <div class="brand">{{ p.brand|upper }}</div>
-          </div>
-        </a>
-        {% endif %}
+      {% for p in items %}
+      <a href="{{ p.url }}" class="card" target="_blank" data-brand="{{ marca }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ marca)|lower }}">
+        <div class="card-img">
+          {% if p.images %}
+            <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
+          {% else %}
+            <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          <div class="ref">{{ p.reference }}</div>
+          <div class="name">{{ p.name|upper }}</div>
+          <div class="brand">{{ marca|upper }}</div>
+        </div>
+      </a>
       {% endfor %}
     </div>
   </section>
-
-  <section class="brand" id="am-relojes">
-    <h2 class="brand-header">AM Relojes</h2>
-    <div class="grid">
-      {% for p in products %}
-        {% if p.brand == 'AM Relojes' %}
-        <a href="{{ p.url }}" class="card" target="_blank" data-brand="{{ p.brand }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ p.brand)|lower }}">
-          <div class="card-img">
-            {% if p.images %}
-              <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
-            {% else %}
-              <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
-            {% endif %}
-          </div>
-          <div class="card-body">
-            <div class="ref">{{ p.reference }}</div>
-            <div class="name">{{ p.name|upper }}</div>
-            <div class="brand">{{ p.brand|upper }}</div>
-          </div>
-        </a>
-        {% endif %}
-      {% endfor %}
-    </div>
-  </section>
-
-  <section class="brand" id="jean-vernier">
-    <h2 class="brand-header">Jean Vernier</h2>
-    <div class="grid">
-      {% for p in products %}
-        {% if p.brand == 'Jean Vernier' %}
-        <a href="{{ p.url }}" class="card" target="_blank" data-brand="{{ p.brand }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ p.brand)|lower }}">
-          <div class="card-img">
-            {% if p.images %}
-              <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
-            {% else %}
-              <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
-            {% endif %}
-          </div>
-          <div class="card-body">
-            <div class="ref">{{ p.reference }}</div>
-            <div class="name">{{ p.name|upper }}</div>
-            <div class="brand">{{ p.brand|upper }}</div>
-          </div>
-        </a>
-        {% endif %}
-      {% endfor %}
-    </div>
-  </section>
-
-  <section class="brand" id="other-brands">
-    <h2 class="brand-header">Otras marcas</h2>
-    <div class="grid">
-      {% for p in products %}
-        {% if p.brand not in ['Casio', 'AM Relojes', 'Jean Vernier'] %}
-        <a href="{{ p.url }}" class="card" target="_blank" data-brand="{{ p.brand }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ p.brand)|lower }}">
-          <div class="card-img">
-            {% if p.images %}
-              <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
-            {% else %}
-              <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
-            {% endif %}
-          </div>
-          <div class="card-body">
-            <div class="ref">{{ p.reference }}</div>
-            <div class="name">{{ p.name|upper }}</div>
-            <div class="brand">{{ p.brand|upper }}</div>
-          </div>
-        </a>
-        {% endif %}
-      {% endfor %}
-    </div>
-  </section>
+  {% endfor %}
 </main>
 
 <footer>

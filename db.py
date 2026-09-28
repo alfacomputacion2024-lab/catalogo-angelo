@@ -4,6 +4,7 @@ import re
 import sqlite3
 
 from config import DATA_DIR, DB_PATH, IMAGES_DIR
+from marcas import watch_brand
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS products (
@@ -89,7 +90,9 @@ def row_to_dict(row) -> dict:
     return d
 
 
-def query_products(brand=None, line=None, gender=None, q=None, status="active", ids=None):
+def query_products(brand=None, line=None, gender=None, q=None, status="active", ids=None,
+                   marca=None):
+    """marca = etiqueta real visible (watch_brand); brand = columna cruda."""
     sql = "SELECT * FROM products WHERE 1=1"
     args = []
     if status and status != "all":
@@ -112,7 +115,11 @@ def query_products(brand=None, line=None, gender=None, q=None, status="active", 
         args += list(ids)
     sql += " ORDER BY brand, line, reference"
     with get_conn() as conn:
-        return [row_to_dict(r) for r in conn.execute(sql, args).fetchall()]
+        rows = [row_to_dict(r) for r in conn.execute(sql, args).fetchall()]
+    if marca:
+        rows = [p for p in rows
+                if watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url")) == marca]
+    return rows
 
 
 def distinct_values(column: str, status="active"):
@@ -136,7 +143,13 @@ def set_status(ids, status):
         return cur.rowcount
 
 
-def delete_brand(brand: str):
+def delete_brand(brand=None, marca=None):
+    """Pasa a 'deleted' productos activos. `marca` = marca real visible
+    (watch_brand); `brand` = valor crudo de la columna (compatibilidad)."""
+    if marca:
+        ids = [p["id"] for p in query_products(status="active")
+               if watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url")) == marca]
+        return set_status(ids, "deleted")
     with get_conn() as conn:
         cur = conn.execute("UPDATE products SET status='deleted' WHERE brand=? AND status='active'", (brand,))
         return cur.rowcount
@@ -149,20 +162,23 @@ def update_sell_prices(prices: dict):
             conn.execute("UPDATE products SET sell_price=? WHERE id=?", (val, pid))
 
 
-def keep_only_references(refs, partial=False, brand=None):
+def keep_only_references(refs, partial=False, brand=None, marca=None):
     """Deja activos solo los productos cuya referencia esté en `refs` (tu stock).
-    partial=True: 'GA-2100' conserva todas sus variantes (GA-2100-1A, GA-2100-4A...)."""
+    partial=True: 'GA-2100' conserva todas sus variantes (GA-2100-1A, GA-2100-4A...).
+    marca = marca real visible (watch_brand) para acotar el alcance."""
     wanted = {norm_ref(r) for r in refs if norm_ref(r)}
     if not wanted:
         return 0
     removed = 0
     with get_conn() as conn:
-        sql = "SELECT id, reference FROM products WHERE status='active'"
+        sql = "SELECT id, reference, brand, line, name, url FROM products WHERE status='active'"
         args = []
-        if brand:
+        if brand and not marca:
             sql += " AND brand=?"
             args.append(brand)
         for row in conn.execute(sql, args).fetchall():
+            if marca and watch_brand(row["brand"], row["line"], row["name"], row["url"]) != marca:
+                continue
             ref = norm_ref(row["reference"])
             ok = ref in wanted or (partial and any(ref.startswith(w) for w in wanted))
             if not ok:

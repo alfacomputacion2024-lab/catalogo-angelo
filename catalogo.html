@@ -163,11 +163,9 @@
 </div>
 
 <div class="tabs">
-  <a class="tab {{ 'active' if not selected_brand }}" href="{{ url_for('catalogo') }}">Todas<span class="count">{{ total }}</span></a>
+  <a class="tab {{ 'active' if not selected_brand }}" href="{{ url_for('catalogo') }}">Todas<span class="count">{{ total_all }}</span></a>
   {% for brand in brands %}
-    {% if brand in by_brand %}
-    <a class="tab {{ 'active' if selected_brand==brand }}" href="{{ url_for('catalogo', brand=brand) }}">{{ brand|short_brand }}<span class="count">{{ by_brand[brand]|length }}</span></a>
-    {% endif %}
+    <a class="tab {{ 'active' if selected_brand==brand }}" href="{{ url_for('catalogo', brand=brand) }}">{{ brand }}<span class="count">{{ pill_counts[brand] }}</span></a>
   {% endfor %}
 </div>
 
@@ -211,7 +209,7 @@
           {% endif %}
         </div>
         <div class="card-body">
-          <div class="card-brand">{{ p.brand|short_brand }}</div>
+          <div class="card-brand">{{ brand }}</div>
           <div class="card-ref">{{ p.reference }}</div>
           <div class="card-name">{{ p.name }}</div>
           <div class="card-line"><span>{{ p.line or 'Sin línea' }}</span> {{ ('· ' ~ p.gender) if p.gender and p.gender != 'Sin definir' else '' }}</div>
@@ -231,13 +229,14 @@
 
   {% if total_pages > 1 %}
   <div style="display:flex;justify-content:center;align-items:center;gap:14px;padding:24px 0;flex-wrap:wrap">
-    {% set base = url_for('catalogo') + ('?brand=' ~ selected_brand if selected_brand else '?') %}
+    {% set base = url_for('catalogo', brand=selected_brand) if selected_brand else url_for('catalogo') %}
+    {% set sep = '&amp;' if selected_brand else '?' %}
     {% if page > 1 %}
-      <a href="{{ base ~ '&page=' ~ (page - 1) }}" style="background:var(--accent);color:#000;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">« Anterior</a>
+      <a href="{{ base ~ sep ~ 'page=' ~ (page - 1) }}" style="background:var(--accent);color:#000;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">« Anterior</a>
     {% endif %}
     <span style="color:var(--muted);font-size:13px">Página {{ page }} de {{ total_pages }} ({{ total }} productos)</span>
     {% if page < total_pages %}
-      <a href="{{ base ~ '&page=' ~ (page + 1) }}" style="background:var(--accent);color:#000;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">Siguiente »</a>
+      <a href="{{ base ~ sep ~ 'page=' ~ (page + 1) }}" style="background:var(--accent);color:#000;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">Siguiente »</a>
     {% endif %}
   </div>
   {% endif %}

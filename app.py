@@ -27,10 +27,10 @@ if "--demo" in sys.argv:
 
 import csv
 import io
-import random
 import re
 import tempfile
 from functools import wraps
+from urllib.parse import urlencode
 
 from flask import (Flask, Response, abort, flash, jsonify, redirect,
                    render_template, request, send_file, send_from_directory,
@@ -38,6 +38,7 @@ from flask import (Flask, Response, abort, flash, jsonify, redirect,
 
 import config
 import db
+from marcas import short_brand, watch_brand
 from pdf_catalog import build_pdf
 
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -79,82 +80,10 @@ app = Flask(__name__,
             static_url_path='/static')
 app.secret_key = os.environ.get("SECRET_KEY", "catalogo-relojes-2026")
 
-def short_brand(name):
-    """Acorta nombres largos: 'Tiempo de Relojes (Casio)' -> 'Casio'"""
-    if not name:
-        return name
-    m = re.match(r'^Tiempo de Relojes\s*\((.+)\)$', name)
-    if m:
-        return m.group(1)
-    return name
-
 app.jinja_env.filters['short_brand'] = short_brand
 
-# --- Menú superior: mostrar solo marcas de relojes (nunca la tienda de origen) ---
-MARCAS_RELOJ = {
-    "Casio", "Bulova", "Tommy Hilfiger", "Calvin Klein", "Michael Kors", "Lacoste",
-    "Fossil", "Armani Exchange", "Hugo Boss", "Diesel", "Jean Vernier", "Q&Q",
-    "Curren", "Skmei", "Invicta", "NaviForce", "Hummer", "Seiko", "Tissot",
-    "Victorinox", "Citizen", "Orient", "Anne Klein", "Adidas", "G-Shock",
-    "Edifice", "Baby-G", "ProTrek", "Casper", "Winner", "Skagen", "Obaku",
-    "Guess", "Emporio Armani", "Dkny", "Coach", "Kate Spade",
-    "Versace", "Valentino", "Calvin", "Replay", "Scuderia", "Lotus", "Ice",
-    "Qaza", "Alexandre", "Tissot PRX",
-}
-
-# Tiendas cuyos productos son relojes (la marca real está en línea/nombre/url)
-TIENDAS_RELOJES = {
-    "AM Relojes", "Casa Joia", "TUPI", "Joyería G&A", "Joyería Sosa",
-    "Asunción Joyas", "My Shuzz", "Joyería Domínguez", "Joyería Espínola",
-}
-
-# Tiendas de lentes / perfumes -> categoría visible
-TIENDAS_LENTES = {
-    "Arar Óptica", "Óptica Santa Lucía", "Óptica Visión",
-    "Infinite Eyewear", "Valemar", "Ronan Eyewear",
-}
-TIENDAS_PERFUMES = {
-    "La Perfumería", "Lual Perfumería", "Punto Tienda",
-    "Shopping China Perfumes", "Perfumes",
-}
-
-# Palabra clave (buscada en línea + nombre + url, en minúsculas) -> marca visible
-CLAVES_MARCA = [
-    ("g-shock", "Casio"), ("gshock", "Casio"), ("baby-g", "Casio"), ("babyg", "Casio"),
-    ("edifice", "Casio"), ("protrek", "Casio"), ("casio", "Casio"),
-    ("q&q", "Q&Q"), ("qyq", "Q&Q"), ("relojes-qq", "Q&Q"),
-    ("naviforce", "NaviForce"), ("invicta", "Invicta"), ("curren", "Curren"),
-    ("skmei", "Skmei"), ("hummer", "Hummer"), ("tommy", "Tommy Hilfiger"),
-    ("victorinox", "Victorinox"), ("tissot", "Tissot"), ("seiko", "Seiko"),
-    ("citizen", "Citizen"), ("orient", "Orient"), ("bulova", "Bulova"),
-    ("fossil", "Fossil"), ("calvin", "Calvin Klein"), ("michael kors", "Michael Kors"),
-    ("lacoste", "Lacoste"), ("armani", "Armani Exchange"), ("hugo", "Hugo Boss"),
-    ("boss", "Hugo Boss"), ("diesel", "Diesel"), ("vernier", "Jean Vernier"),
-    ("anne klein", "Anne Klein"), ("anna klein", "Anne Klein"), ("adidas", "Adidas"),
-    ("jean vernier", "Jean Vernier"), ("guess", "Guess"), ("versace", "Versace"),
-    ("casper", "Casper"), ("skagen", "Skagen"), ("obaku", "Obaku"),
-    ("emporio", "Emporio Armani"), ("dkny", "DKNY"), ("coach", "Coach"),
-    ("i.n.o.x", "Victorinox"), ("air pro", "Victorinox"), ("vip", "ViP"),
-]
-
-
-def watch_brand(brand, line="", name="", url=""):
-    """Nombre visible para el menú superior: la marca real del producto,
-    nunca la tienda de la que se scrapeó."""
-    brand = short_brand(brand) if brand else ""
-    if brand in MARCAS_RELOJ:
-        return brand
-    if brand in TIENDAS_LENTES:
-        return line if line in ("Lentes", "Armazones", "Lentes recetados") else "Lentes"
-    if brand in TIENDAS_PERFUMES:
-        return line if line == "Perfumes" else "Perfumes"
-    text = f"{line or ''} {name or ''} {url or ''}".lower()
-    for kw, marca in CLAVES_MARCA:
-        if kw in text:
-            return marca
-    if brand in TIENDAS_RELOJES:
-        return "Varios"
-    return brand or "Varios"
+# La marca real por producto (MARCAS_RELOJ, TIENDAS_*, CLAVES_MARCA y
+# watch_brand) vive en marcas.py: módulo compartido con db.py.
 
 
 def header_pills():
@@ -236,22 +165,29 @@ def index():
     status = request.args.get("status", "active")
     page = request.args.get("page", 1, type=int)
     per_page = 50
-    all_products = db.query_products(brand=f["brand"] or None, line=f["line"] or None,
-                                     gender=f["gender"] or None, q=f["q"] or None, status=status)
+    # Filtrar por MARCA REAL (watch_brand): la columna brand guarda también
+    # la tienda de origen, que nunca se muestra en los menús.
+    all_products = db.query_products(line=f["line"] or None, gender=f["gender"] or None,
+                                     q=f["q"] or None, status=status,
+                                     marca=f["brand"] or None)
     total = len(all_products)
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = max(1, min(page, total_pages))
     products = all_products[(page - 1) * per_page : page * per_page]
+    for p in products:
+        p["_marca"] = watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url"))
     opt_status = status if status in ("active", "deleted") else "active"
     totals = db.stats()
+    pills = header_pills()
+    qs = urlencode({k: v for k, v in request.args.items() if k != "page" and v})
     return render_template(
         "index.html", products=products, f=f, status=status,
-        brands=db.distinct_values("brand", opt_status),
+        brands=[lbl for lbl, _ in pills],
         lines=db.distinct_values("line", opt_status),
         genders=db.distinct_values("gender", opt_status),
         n_active=sum(v["active"] for v in totals.values()),
         n_deleted=sum(v["deleted"] for v in totals.values()),
-        by_brand=totals, pills=header_pills(), back=request.query_string.decode(),
+        by_brand=totals, pills=pills, qs=qs, back=request.query_string.decode(),
         page=page, total_pages=total_pages, total=total,
     )
 
@@ -330,7 +266,7 @@ def stock():
         flash("Pega al menos una referencia.", "warn")
         return back()
     removed = db.keep_only_references(refs, partial=bool(request.form.get("partial")),
-                                      brand=request.form.get("brand") or None)
+                                      marca=request.form.get("brand") or None)
     flash(f"Listo: se quitaron {removed} productos que no están en tu stock.", "ok")
     return back()
 
@@ -340,7 +276,7 @@ def stock():
 def eliminar_marca():
     brand = request.form.get("brand")
     if brand:
-        flash(f"{db.delete_brand(brand)} productos de {brand} eliminados.", "ok")
+        flash(f"{db.delete_brand(marca=brand)} productos de {brand} eliminados.", "ok")
     return back()
 
 
@@ -352,7 +288,8 @@ def pdf():
     try:
         brands = request.form.getlist("brands")
         all_products = db.query_products(status="active")
-        products = [p for p in all_products if not brands or p["brand"] in brands]
+        products = [p for p in all_products if not brands
+                    or watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url")) in brands]
         if not products:
             flash("No hay productos activos para el PDF.", "warn")
             return back()
@@ -400,22 +337,28 @@ def catalogo():
     page = request.args.get("page", 1, type=int)
     per_page = 60
     products = db.query_products(status="active")
-    brands = db.distinct_values("brand", "active")
-    if brand:
-        products = [p for p in products if p["brand"] == brand]
-    # Agrupar por marca
-    by_brand = {}
+    # Etiqueta de marca REAL por producto (nunca la tienda de origen)
     for p in products:
-        by_brand.setdefault(p["brand"], []).append(p)
-    # Si no hay marca seleccionada, paginar el total
+        p["_marca"] = watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url"))
+    if brand:
+        products = [p for p in products if p["_marca"] == brand]
+    # Orden: marca -> modelo
+    products.sort(key=lambda p: (p["_marca"], (p.get("name") or "").lower(),
+                                 p.get("reference") or ""))
+    pills = header_pills()                       # [(marca, total)] ordenado desc
+    pill_counts = dict(pills)
+    total_all = sum(pill_counts.values())
+    # Paginar sobre la lista ya ordenada
     total = len(products)
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = max(1, min(page, total_pages))
     paginated = products[(page - 1) * per_page : page * per_page]
     by_brand_page = {}
     for p in paginated:
-        by_brand_page.setdefault(p["brand"], []).append(p)
-    return render_template("catalogo.html", by_brand=by_brand_page, brands=brands,
+        by_brand_page.setdefault(p["_marca"], []).append(p)
+    return render_template("catalogo.html", by_brand=by_brand_page,
+                           brands=[lbl for lbl, _ in pills], pill_counts=pill_counts,
+                           total_all=total_all,
                            selected_brand=brand, theme=json.loads(config.THEME_PATH.read_text(encoding="utf-8")),
                            usuario=session.get("usuario"),
                            page=page, total_pages=total_pages, total=total)
@@ -427,10 +370,16 @@ def catalogo():
 @app.route("/client")
 def client_catalog():
     products = db.query_products(status="active")
-    # Orden al azar en cada visita: el catálogo nunca se ve igual («original»).
-    random.shuffle(products)
-    brands = db.distinct_values("brand", "active")
-    return render_template("client_catalog.html", products=products, brands=brands,
+    # Agrupar por MARCA REAL del producto (nunca la tienda de origen) y
+    # ordenar cada grupo por modelo (nombre -> referencia).
+    grupos = {}
+    for p in products:
+        marca = watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url"))
+        grupos.setdefault(marca, []).append(p)
+    for items in grupos.values():
+        items.sort(key=lambda p: ((p.get("name") or "").lower(), p.get("reference") or ""))
+    grupos = {m: grupos[m] for m in sorted(grupos)}  # marcas en orden alfabético
+    return render_template("client_catalog.html", grupos=grupos, marcas=list(grupos),
                            theme=json.loads(config.THEME_PATH.read_text(encoding="utf-8")))
 
 
@@ -440,7 +389,7 @@ def client_catalog():
 @app.route("/agregar", methods=["GET", "POST"])
 @login_requerido
 def agregar():
-    brands = db.distinct_values("brand", "active")
+    brands = [lbl for lbl, _ in header_pills()]   # marcas reales (nunca tiendas)
     if request.method == "POST":
         # Obtener datos del formulario
         brand = request.form.get("brand", "").strip()

@@ -20,6 +20,7 @@ Sistema completo para la joyería **Angelo** (Encarnación, Paraguay):
 | Archivo | Para qué sirve |
 |---|---|
 | `app.py` | **Servidor principal (Flask)**. Todas las rutas: panel, catálogos, login, PDF, APIs, fotos. |
+| `marcas.py` | **Marca real por producto** (nunca la tienda de origen): `watch_brand()` + listas de marcas/tiendas. Lo comparten `app.py` y `db.py`. |
 | `db.py` | Acceso a la base SQLite (`catalogo.db`): crear, consultar, editar productos. |
 | `config.py` | Configuración general: rutas, marcas de scraping, límites, usuario-agente. |
 | `images.py` | Descarga, recorte y optimización de fotos (JPEG, máx. 1200 px). |
@@ -100,6 +101,14 @@ python tests/test_smoke.py   # prueba de humo (21 checks)
 
 ## 5. Cómo se publican los cambios (Render)
 
+> **⚠️ Antes de CADA despliegue: rescatar los precios.** Render restaura `catalogo.db`
+> desde el repositorio en cada deploy, así que lo que el cliente cargue en el panel
+> (precios) vive solo hasta el próximo despliegue. Correr desde la raíz del repo:
+> ```powershell
+> python tools/rescatar_precios.py --aplicar    # baja los precios del servidor al repo
+> ```
+> y sumar `catalogo.db` al commit. Sin ese paso, los precios cargados en producción se pierden.
+
 1. Subir el cambio a GitHub (rama `main`).
 2. Disparar el **deploy hook** (URL secreta guardada en la PC del administrador):
    ```powershell
@@ -143,8 +152,8 @@ Pasos generales:
 - **Nueva marca para scrapear**: agregar una entrada en `config.BRANDS` y correr
   `python tools/run_scrape.py --brand <clave>`.
 - **Nueva categoría visible** (ej. una tienda nueva de lentes): sumarla en el set
-  correspondiente de `app.py` (`TIENDAS_LENTES`, `TIENDAS_PERFUMES`, `TIENDAS_RELOJES`).
-- **Nueva marca en el menú**: agregarla a `MARCAS_RELOJ`/`CLAVES_MARCA` en `app.py`.
+  correspondiente de `marcas.py` (`TIENDAS_LENTES`, `TIENDAS_PERFUMES`, `TIENDAS_RELOJES`).
+- **Nueva marca en el menú**: agregarla a `MARCAS_RELOJ`/`CLAVES_MARCA` en `marcas.py`.
 - **Cambiar diseño de PDFs**: editar `theme.json` (colores, columnas, textos de contacto).
 - **Productos manuales**: desde el panel → *Agregar*, con fotos desde la PC.
 

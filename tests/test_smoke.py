@@ -12,12 +12,14 @@ Verifica que:
 Uso:  python tests/test_smoke.py        (sale con código 1 si algo falla)
 """
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from app import app  # noqa: E402
+from app import watch_brand  # noqa: E402
 
 C = app.test_client()
 ok = fail = 0
@@ -44,16 +46,30 @@ check("/client no muestra el panel admin", b"Panel Admin" not in r.data)
 check("/client pide las fotos por /img/ (ruta que existe)", b'src="/img/' in r.data)
 check("/client incluye selector de fondo (data-tema)", b'data-tema' in r.data)
 check("/client usa el amarillo principal", b'#F2C544' in r.data)
-check("/client ordena productos al azar (varía entre visitas)",
-      C.get("/client").data != C.get("/client").data)
+check("/client orden estable por marca y modelo (2 visitas idénticas)",
+      C.get("/client").data == C.get("/client").data)
 r = C.get("/client")
 check("/client tiene buscador y filtro de marcas",
       b'id="buscador"' in r.data and b'data-marca=' in r.data)
+check("/client agrupa por marca real, nunca por tienda de origen",
+      b'data-marca="Casio"' in r.data
+      and b'data-marca="AM Relojes"' not in r.data
+      and b'data-brand="AM Relojes"' not in r.data)
+secciones = re.findall(rb'brand-header">([^<]+)<', r.data)
+check("/client secciones de marca en orden alfabético",
+      len(secciones) >= 20 and secciones == sorted(secciones))
 check("/client menu con anclas reales (Inicio/Catálogo)",
       b'href="#top"' in r.data and b'href="#catalogo"' in r.data)
 r = C.get("/catalogo")
 check("/catalogo público -> 200", r.status_code == 200)
 check("/catalogo usa el amarillo principal", b'#F2C544' in r.data)
+check("/catalogo pestañas por marca real (sin tiendas de origen)",
+      b'>AM Relojes<' not in r.data and b'>Casio<span' in r.data)
+r = C.get("/catalogo?brand=Casio")
+check("/catalogo ?brand=Casio -> única sección Casio",
+      re.findall(rb'brand-header">\s*<h2>([^<]+)</h2>', r.data) == [b"Casio"])
+check("watch_brand: la tienda de origen se traduce a marca real",
+      watch_brand("AM Relojes", "", "Casio GA-2100-1A", "") == "Casio")
 r = C.get("/")
 check("/ sin sesión -> redirect a /login",
       r.status_code == 302 and "/login" in r.headers.get("Location", ""))
@@ -86,7 +102,24 @@ print("— login admin —")
 r = login("admin@mitienda.com.py", "admin123")
 check("login admin -> redirect", r.status_code == 302)
 r = C.get("/")
-check("panel admin con sesión -> 200", r.status_code == 200 and b"Panel Admin" in r.data)
+panel = r.data
+s_panel = panel.decode("utf-8")
+check("panel admin con sesión -> 200", r.status_code == 200 and b"Panel Admin" in panel)
+check("panel: menús solo con marcas reales (sin tiendas de origen)",
+      b">AM Relojes</option>" not in panel and b">Casio</option>" in panel)
+check("panel: las tarjetas muestran la marca real",
+      b'class="brand">AM Relojes<' not in panel)
+import db as _db  # noqa: E402
+n_casio = sum(1 for p in _db.query_products(status="active")
+              if watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url")) == "Casio")
+m = re.search(rb"\((\d+) total\)", C.get("/?brand=Casio").data)
+check("panel: ?brand=Casio filtra por marca real (incluye las de tiendas)",
+      bool(m) and int(m.group(1)) == n_casio)
+r = C.get("/agregar")
+s_agr = r.data.decode("utf-8")
+check("/agregar: datalist de marcas sin nombres de tienda",
+      r.status_code == 200 and "Joyería Domínguez" not in s_panel
+      and "Joyería Domínguez" not in s_agr and "Casio" in s_agr)
 check("API PUT con sesión pasa la auth (404 = id inexistente)",
       C.put("/api/producto/99999999", json={"name": "x"}).status_code == 404)
 C.get("/logout")
