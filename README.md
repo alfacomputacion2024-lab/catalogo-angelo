@@ -49,6 +49,7 @@ Las plantillas viven en la **raíz** en producción (y en `templates/` en desarr
 |---|---|
 | `tools/run_scrape.py` | **Extractor de productos** marca por marca desde los sitios proveedores. |
 | `tools/scraper.py` | Motor de scraping: descarga y parseo de fichas (JSON-LD > OpenGraph > HTML). |
+| `tools/hacer_zip_por_marca.py` | Genera `Catalogo_Angelo_por_Marca.zip` (carpetas por marca + CSV + `_LEEME.txt`), portable: las rutas salen de la ubicación del script. |
 | `tools/classify.py` | Clasificador de línea (Hombre/Mujer) y familia de relojes. |
 | `tools/cargar_casajoia.py` | Carga puntual de productos de Casa Joia (dataset histórico). |
 | `tools/ver_marcas.py` / `ver_productos.py` | Conteos rápidos para inspeccionar la base. |
@@ -136,21 +137,31 @@ python tests/test_smoke.py   # prueba de humo (41 checks)
 
 ## 6. Migración a Hostinger (cuando se decida)
 
-**Qué llevar:** este repositorio completo (código + `catalogo.db` + `data/imagenes/` ≈ 110 MB).
+> **⚠️ Dato oficial de Hostinger (verificado 29/09/2026):** su hosting
+> compartido **NO soporta Python** — el soporte de Hostinger indica que
+> Python es "exclusivamente soportado en nuestras VPS". O sea: para
+> correr este sitio en Hostinger hace falta un **VPS Linux** (o quedarse
+> en Render, que sigue funcionando como respaldo).
+
+**Qué llevar:** este repositorio completo (código + `catalogo.db` +
+`data/imagenes/`). La guía exprés —qué hay adentro, cómo probarlo, pasos
+exactos en el VPS y checklist de validación— está en el **`LEEME_PRIMERO.txt`**
+del paquete `Catalogo_Angelo_Hostinger.zip`, y el detalle de cada archivo en
+la §1 de este README.
 
 Pasos generales:
 
-1. **Exportar**: generar un ZIP del repo (sin `.git/`, sin `__pycache__/`, sin `salida/`).
-2. **Subir** por el Administrador de Archivos de Hostinger a la carpeta raíz del dominio.
-3. **Asegurar soporte Python**: el plan debe poder correr `python` + `gunicorn`
-   (VPS = garantizado; hosting compartido = verificar la sección "Terminal/Python" del hPanel).
-4. **Configurar arranque**:
+1. **Exportar**: ZIP del repo sin `.git/`, sin `__pycache__/`, sin `salida/`.
+2. **Subir** por el Administrador de Archivos de Hostinger (VPS) y descomprimir.
+3. **Configurar arranque** (en el VPS, con venv):
    ```bash
+   python3 -m venv venv && source venv/bin/activate
    pip install -r requirements.txt
-   gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --threads 2
+   gunicorn app:app --bind 0.0.0.0:8000 --timeout 120 --workers 1 --threads 2
    ```
-5. **Variables de entorno**: `CATALOGO_DATA_DIR=data`, `SECRET_KEY`, `ADMIN_PASSWORD`, `SOCIO_PASSWORD`.
-6. **Verificar** con la misma prueba: `python tests/test_smoke.py` y entrar a `/client`.
+   (dejándolo con `systemd` para que arranque solo; ver `LEEME_PRIMERO.txt`).
+4. **Variables de entorno**: `CATALOGO_DATA_DIR=data`, `SECRET_KEY`, `ADMIN_PASSWORD`, `SOCIO_PASSWORD`.
+5. **Verificar** con la misma prueba: `python tests/test_smoke.py` y entrar a `/client`.
 
 > Cuando decidas el momento, se hace junto a vos paso a paso y se deja el Render actual
 > andando como respaldo hasta validar la migración.

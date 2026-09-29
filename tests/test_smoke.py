@@ -96,8 +96,8 @@ r = C.get("/static/logo_A.png")
 check("favicon /static/logo_A.png -> 200", r.status_code == 200)
 
 print("— fotos —")
-r = C.get("/img/amrelojes/3983_1.jpg")
-check("foto local /img -> 200 image/jpeg",
+r = C.get("/img/casio_oficial/A158WA-1.jpg")
+check("foto oficial local /img -> 200 image/jpeg",
       r.status_code == 200 and (r.mimetype or "").startswith("image/"))
 
 print("— login admin —")

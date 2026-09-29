@@ -117,7 +117,10 @@
 <body>
 <header>
   <h1>⚙ <span>Panel Admin</span></h1>
-  <div class="stats">
+  <!-- Menú superior de pastillas OCULTO a pedido del cliente (29/09/2026):
+       ya existe el menú de filtros (Marca/Línea/Género/Ver) más abajo.
+       Para volver a mostrarlo: quitar el style display:none. -->
+  <div class="stats" style="display:none">
     <span class="pill">👁 <b>{{ n_active }}</b> activos</span>
     <span class="pill">🗑 <b>{{ n_deleted }}</b> eliminados</span>
     {% for b, n in pills %}
