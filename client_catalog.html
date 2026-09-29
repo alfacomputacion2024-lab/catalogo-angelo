@@ -135,7 +135,9 @@
     <h2 class="brand-header">{{ marca }}</h2>
     <div class="grid">
       {% for p in items %}
-      <a href="{{ p.url }}" class="card" target="_blank" data-brand="{{ marca }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ marca)|lower }}">
+      <!-- Tarjeta SIN enlace a tiendas externas (pedido 29/09/2026):
+           el clic se queda en la página; se muestra marca + modelo. -->
+      <div class="card" data-brand="{{ marca }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ marca)|lower }}">
         <div class="card-img">
           {% if p.images %}
             <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
@@ -148,7 +150,7 @@
           <div class="name">{{ p.name|upper }}</div>
           <div class="brand">{{ marca|upper }}</div>
         </div>
-      </a>
+      </div>
       {% endfor %}
     </div>
   </section>

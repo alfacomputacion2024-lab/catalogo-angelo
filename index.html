@@ -214,7 +214,7 @@
               {% endif %}
             </div>
             <div class="brand">{{ p._marca }}</div>
-            <div class="ref"><a href="{{ p.url }}" target="_blank" onclick="event.stopPropagation()">{{ p.reference }}</a></div>
+            <div class="ref">{{ p.reference }}</div>
             <div class="nm" title="{{ p.name }}">{{ p.name }}</div>
             <div class="tag">{{ p.line }} · {{ p.gender }}</div>
             <input class="price-input" type="text" name="price_{{ p.id }}" value="{{ '%g'|format(p.sell_price) if p.sell_price else '' }}" placeholder="Precio" onclick="event.stopPropagation()">
