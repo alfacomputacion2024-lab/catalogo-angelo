@@ -91,6 +91,15 @@ for fname in archivos:
     modelo = fname[:-4]
     info = urls.get(modelo)
     if info is None:
+        # foto extra del mismo modelo: A1000ACD-7_2 -> A1000ACD-7
+        base = re.sub(r"_\d+$", "", modelo)
+        info = urls.get(base)
+        if info is None:
+            for m, (ln, u) in urls.items():
+                if safe_name(m) == base:
+                    info = (ln, u)
+                    break
+    if info is None:
         # intento inverso: nombre saneado -> modelo original
         for m, (ln, u) in urls.items():
             if safe_name(m) == modelo:
