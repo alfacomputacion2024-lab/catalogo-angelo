@@ -471,6 +471,31 @@ def agregar():
 
 
 # =============================================================================
+# Ficha pública (galería al tocar un modelo) — SOLO lectura, sin login
+# =============================================================================
+@app.route("/api/ficha/<int:pid>")
+def api_ficha(pid):
+    """Devuelve las fotos extras y las especificaciones de un producto.
+
+    No incluye precios ni url de origen: sirve igual en /client (sin precios)
+    que en /catalogo (el precio ya se muestra en la tarjeta).
+    """
+    rows = db.query_products(status="active", ids=[pid])
+    if not rows:
+        return jsonify({"error": "Producto no encontrado"}), 404
+    p = rows[0]
+    return jsonify({
+        "id": p["id"],
+        "reference": p.get("reference") or "",
+        "name": p.get("name") or "",
+        "marca": watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url")),
+        "line": p.get("line") or "",
+        "images": [url_for("img", p=img) for img in (p.get("images") or [])],
+        "specs": p.get("specs") or {},
+    })
+
+
+# =============================================================================
 # API REST para gestionar productos desde el catálogo online (requiere login)
 # =============================================================================
 @app.route("/api/producto/<int:pid>", methods=["PUT"])

@@ -86,6 +86,35 @@
   .card-actions .btn-edit:hover { color: var(--accent); border-color: var(--accent); }
   .card-actions .btn-delete:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-bg); }
 
+  /* ===== Visor de fotos (galería al tocar el modelo) ===== */
+  .card { cursor: pointer; }
+  .foto-badge { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.72); color: var(--accent); border: 1px solid var(--accent-dim); border-radius: 999px; font-size: 11px; padding: 2px 8px; z-index: 2; }
+  .visor { position: fixed; inset: 0; background: rgba(0,0,0,.88); display: none; align-items: center; justify-content: center; padding: 1rem; z-index: 300; }
+  .visor.on { display: flex; }
+  .visor-caja { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 920px; max-height: 94vh; overflow: auto; position: relative; }
+  .visor-cerrar { position: absolute; top: .6rem; right: .6rem; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 1.4rem; line-height: 1; cursor: pointer; z-index: 3; }
+  .visor-cerrar:hover { border-color: var(--accent); color: var(--accent); }
+  .visor-foto { position: relative; background: #0d0d12; min-height: 240px; display: flex; align-items: center; justify-content: center; padding: 1.4rem 2.8rem .6rem; }
+  .visor-foto img { max-width: 100%; max-height: 56vh; object-fit: contain; }
+  .visor-flecha { position: absolute; top: 50%; transform: translateY(-50%); width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--border); background: rgba(36,36,36,.92); color: var(--accent); font-size: 1.5rem; line-height: 1; cursor: pointer; z-index: 2; }
+  .visor-flecha:hover { background: var(--accent); color: #111; }
+  .visor-flecha.izq { left: .5rem; }
+  .visor-flecha.der { right: .5rem; }
+  .visor-cont { position: absolute; bottom: .5rem; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.6); color: var(--text); font-size: 12px; padding: 1px 8px; border-radius: 999px; }
+  .visor-mini { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; padding: .6rem 1rem 0; }
+  .visor-mini img { width: 52px; height: 52px; object-fit: contain; background: #111; border: 2px solid transparent; border-radius: 8px; cursor: pointer; opacity: .65; }
+  .visor-mini img.sel { border-color: var(--accent); opacity: 1; }
+  .visor-info { padding: 1rem 1.2rem 1.3rem; }
+  .visor-marca { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; }
+  .visor-ref { font-size: 21px; font-weight: 700; margin-top: 2px; }
+  .visor-nombre { color: var(--muted); font-size: 15px; }
+  .visor-precio { font-size: 16px; font-weight: 700; color: var(--accent); margin-top: 4px; }
+  .visor-specs { margin-top: .9rem; display: grid; grid-template-columns: 1fr; gap: .35rem; }
+  @media (min-width: 640px) { .visor-specs { grid-template-columns: 1fr 1fr; } }
+  .visor-specs div { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: .45rem .6rem; font-size: 13px; line-height: 1.35; }
+  .visor-specs b { color: var(--accent); display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; font-weight: 600; }
+  .visor-estado { padding: 2rem; text-align: center; color: var(--muted); }
+
   /* --- WhatsApp floating --- */
   /* OCULTO a pedido: para reactivar, cambiar display:none por flex en .whatsapp-float */
   .whatsapp-float { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; background: #25D366; border-radius: 50%; display: none; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,.4); z-index: 500; transition: transform .2s; text-decoration: none; }
@@ -194,6 +223,9 @@
     <div class="grid">
       {% for p in products %}
       <div class="card" data-id="{{ p.id }}" data-search="{{ (p.reference ~ ' ' ~ p.name ~ ' ' ~ (p.line or '') ~ ' ' ~ (p.gender or ''))|lower }}">
+        {% if p.images|length > 1 %}
+        <span class="foto-badge">📷 {{ p.images|length }}</span>
+        {% endif %}
         <div class="card-img">
           {% if p.images %}
             {% set img_src = p.images[0] if p.images else '' %}
@@ -278,6 +310,28 @@
 
 <!-- Toast -->
 <div class="toast" id="toast" style="display:none"></div>
+
+<!-- ===== Visor de fotos: al tocar un modelo se ven TODAS sus fotos + datos ===== -->
+<div class="visor" id="visor" aria-hidden="true">
+  <div class="visor-caja" role="dialog" aria-modal="true">
+    <button class="visor-cerrar" id="visorCerrar" aria-label="Cerrar">✕</button>
+    <div class="visor-foto">
+      <button class="visor-flecha izq" id="visorPrev" aria-label="Foto anterior">‹</button>
+      <img id="visorImg" alt="" style="display:none">
+      <div class="visor-estado" id="visorEstado">Cargando…</div>
+      <button class="visor-flecha der" id="visorNext" aria-label="Foto siguiente">›</button>
+      <span class="visor-cont" id="visorCont" style="display:none"></span>
+    </div>
+    <div class="visor-mini" id="visorMini"></div>
+    <div class="visor-info">
+      <div class="visor-marca" id="visorMarca"></div>
+      <div class="visor-ref" id="visorRef"></div>
+      <div class="visor-nombre" id="visorNombre"></div>
+      <div class="visor-precio" id="visorPrecio"></div>
+      <div class="visor-specs" id="visorSpecs"></div>
+    </div>
+  </div>
+</div>
 
 <!-- WhatsApp -->
 <a href="https://wa.me/595000000000" target="_blank" class="whatsapp-float" title="Contactanos por WhatsApp">
@@ -374,6 +428,110 @@ function filterProducts() {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 // Cerrar modal clickeando afuera
 document.getElementById('editModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+// ===== Galería: tocar un modelo abre todas sus fotos + especificaciones =====
+(function(){
+  const visor = document.getElementById('visor');
+  const vImg = document.getElementById('visorImg');
+  const vEst = document.getElementById('visorEstado');
+  const vCont = document.getElementById('visorCont');
+  const vMini = document.getElementById('visorMini');
+  const vMarca = document.getElementById('visorMarca');
+  const vRef = document.getElementById('visorRef');
+  const vNom = document.getElementById('visorNombre');
+  const vPrecio = document.getElementById('visorPrecio');
+  const vSpecs = document.getElementById('visorSpecs');
+  let fotos = [], i = 0, cargando = null;
+
+  function pintar(){
+    if (!fotos.length) { vImg.style.display = 'none'; vCont.style.display = 'none'; return; }
+    vImg.src = fotos[i];
+    vImg.style.display = '';
+    vEst.style.display = 'none';
+    vCont.style.display = '';
+    vCont.textContent = (i + 1) + ' / ' + fotos.length;
+    [].forEach.call(vMini.children, (t, k) => t.classList.toggle('sel', k === i));
+  }
+  function mover(d){
+    if (!fotos.length) return;
+    i = (i + d + fotos.length) % fotos.length;
+    pintar();
+  }
+  function abrir(id, precioTexto){
+    visor.classList.add('on');
+    visor.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    fotos = []; i = 0;
+    vImg.style.display = 'none'; vCont.style.display = 'none'; vMini.innerHTML = '';
+    vEst.style.display = ''; vEst.textContent = 'Cargando…';
+    vMarca.textContent = ''; vRef.textContent = ''; vNom.textContent = '';
+    vPrecio.textContent = precioTexto || '';
+    vSpecs.innerHTML = '';
+    if (cargando && cargando.abort) cargando.abort();
+    cargando = fetch('/api/ficha/' + id)
+      .then(r => { if (!r.ok) throw 0; return r.json(); })
+      .then(p => {
+        vMarca.textContent = p.marca || '';
+        vRef.textContent = p.reference || '';
+        vNom.textContent = (p.name || '').toUpperCase();
+        fotos = p.images || [];
+        const claves = Object.keys(p.specs || {});
+        if (claves.length) {
+          claves.forEach(k => {
+            const d = document.createElement('div');
+            const b = document.createElement('b');
+            b.textContent = k;
+            d.appendChild(b);
+            d.appendChild(document.createTextNode(p.specs[k]));
+            vSpecs.appendChild(d);
+          });
+        } else {
+          vSpecs.innerHTML = '<div style="grid-column:1/-1;color:var(--muted)">Sin datos técnicos disponibles.</div>';
+        }
+        if (!fotos.length) { vEst.style.display = ''; vEst.textContent = 'Sin fotos disponibles.'; return; }
+        fotos.forEach((u, k) => {
+          const t = document.createElement('img');
+          t.loading = 'lazy'; t.src = u; t.alt = (p.reference || '') + ' ' + (k + 1);
+          t.onclick = () => { i = k; pintar(); };
+          vMini.appendChild(t);
+        });
+        i = 0; pintar();
+      })
+      .catch(() => { vEst.style.display = ''; vEst.textContent = 'No se pudo cargar la ficha. Probá de nuevo.'; });
+  }
+  function cerrar(){
+    visor.classList.remove('on');
+    visor.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('click', e => {
+    // Los botones de edición/borrado NO abren la galería
+    if (e.target.closest('button') || e.target.closest('.card-actions')) return;
+    const c = e.target.closest ? e.target.closest('.card[data-id]') : null;
+    if (!c) return;
+    const precio = c.querySelector('.card-price');
+    abrir(c.dataset.id, precio ? precio.textContent.trim() : '');
+  });
+  document.getElementById('visorCerrar').onclick = cerrar;
+  document.getElementById('visorPrev').onclick = () => mover(-1);
+  document.getElementById('visorNext').onclick = () => mover(1);
+  visor.addEventListener('click', e => { if (e.target === visor) cerrar(); });
+  document.addEventListener('keydown', e => {
+    if (!visor.classList.contains('on')) return;
+    if (e.key === 'Escape') cerrar();
+    if (e.key === 'ArrowLeft') mover(-1);
+    if (e.key === 'ArrowRight') mover(1);
+  });
+  let x0 = null;
+  visor.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, {passive: true});
+  visor.addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 45) mover(dx < 0 ? 1 : -1);
+    x0 = null;
+  }, {passive: true});
+})();
 </script>
 <!-- Selector de fondo: negro · gris · azul oscuro · verde oscuro -->
 <div class="temas" title="Cambiar color de fondo">

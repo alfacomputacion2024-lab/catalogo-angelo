@@ -100,6 +100,32 @@ r = C.get("/img/casio_oficial/A158WA-1.jpg")
 check("foto oficial local /img -> 200 image/jpeg",
       r.status_code == 200 and (r.mimetype or "").startswith("image/"))
 
+print("— galería del modelo (visor de fotos) —")
+html_client = C.get("/client").data.decode("utf-8")
+check("/client incluye el visor de fotos", 'id="visor"' in html_client)
+check("/client tarjetas con data-id (para abrir la ficha)", 'data-id="' in html_client)
+check("/client avisa cuando un modelo tiene fotos extra", "foto-badge" in html_client)
+m_id = re.search(r'data-id="(\d+)"', html_client)
+check("/client alguna tarjeta trae id real", bool(m_id))
+if m_id:
+    r = C.get(f"/api/ficha/{m_id.group(1)}")
+    j = r.get_json(silent=True) or {}
+    check("api/ficha -> 200 JSON", r.status_code == 200 and isinstance(j, dict))
+    check("api/ficha trae fotos por /img/ local",
+          isinstance(j.get("images"), list) and len(j["images"]) >= 1
+          and all(u.startswith("/img/") for u in j["images"]))
+    check("api/ficha trae specs (dict)", isinstance(j.get("specs"), dict))
+    check("api/ficha NO filtra el precio de venta",
+          "sell_price" not in j and "price" not in j)
+    check("api/ficha NO filtra la url de origen de otras tiendas",
+          "url" not in j)
+check("api/ficha id inexistente -> 404",
+      C.get("/api/ficha/999999999").status_code == 404)
+html_col = C.get("/catalogo").data.decode("utf-8")
+check("/catalogo también tiene el visor", 'id="visor"' in html_col)
+check("/catalogo el clic de Editar/Eliminar NO abre la galería",
+      "closest('button')" in html_col)
+
 print("— login admin —")
 r = login("admin@mitienda.com.py", "admin123")
 check("login admin -> redirect", r.status_code == 302)

@@ -73,8 +73,48 @@
     /* Card */
     .card{
       background:var(--card);border-radius:12px;padding:1.5rem;text-decoration:none;color:var(--ink);
-      transition:transform .2s,box-shadow .2s}
+      transition:transform .2s,box-shadow .2s;cursor:pointer;position:relative}
     .card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+    /* Aviso de fotos extras: invita a tocar el modelo */
+    .foto-badge{
+      position:absolute;top:.7rem;right:.7rem;background:rgba(0,0,0,.72);color:var(--acc);
+      border:1px solid var(--acc-dim);border-radius:999px;font-size:.7rem;padding:.15rem .5rem;
+      display:flex;align-items:center;gap:.25rem;z-index:2}
+    /* ===== Visor de fotos (galería al tocar el modelo) ===== */
+    .visor{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;
+      justify-content:center;padding:1rem;z-index:200}
+    .visor.on{display:flex}
+    .visor-caja{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+      width:100%;max-width:920px;max-height:94vh;overflow:auto;position:relative}
+    .visor-cerrar{position:absolute;top:.6rem;right:.6rem;width:38px;height:38px;border-radius:50%;
+      border:1px solid var(--border);background:var(--card);color:var(--ink);font-size:1.4rem;
+      line-height:1;cursor:pointer;z-index:3}
+    .visor-cerrar:hover{border-color:var(--acc);color:var(--acc)}
+    .visor-foto{position:relative;background:#0d0d12;min-height:240px;display:flex;align-items:center;
+      justify-content:center;padding:1.4rem 2.8rem .6rem}
+    .visor-foto img{max-width:100%;max-height:56vh;object-fit:contain}  /* SIEMPRE completa, sin recorte */
+    .visor-flecha{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;
+      border-radius:50%;border:1px solid var(--border);background:rgba(26,26,36,.9);color:var(--acc);
+      font-size:1.5rem;line-height:1;cursor:pointer;z-index:2}
+    .visor-flecha:hover{background:var(--acc);color:#111}
+    .visor-flecha.izq{left:.5rem}.visor-flecha.der{right:.5rem}
+    .visor-cont{position:absolute;bottom:.5rem;left:50%;transform:translateX(-50%);
+      background:rgba(0,0,0,.6);color:var(--ink);font-size:.75rem;padding:.1rem .6rem;border-radius:999px}
+    .visor-mini{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;padding:.6rem 1rem 0}
+    .visor-mini img{width:52px;height:52px;object-fit:contain;background:#111;border:2px solid transparent;
+      border-radius:8px;cursor:pointer;opacity:.65}
+    .visor-mini img.sel{border-color:var(--acc);opacity:1}
+    .visor-info{padding:1rem 1.2rem 1.3rem}
+    .visor-marca{color:var(--acc);font-size:.8rem;text-transform:uppercase;letter-spacing:.6px}
+    .visor-ref{font-size:1.3rem;font-weight:700;margin-top:.15rem}
+    .visor-nombre{color:var(--muted);font-size:.95rem}
+    .visor-specs{margin-top:.9rem;display:grid;grid-template-columns:1fr;gap:.35rem}
+    @media(min-width:640px){.visor-specs{grid-template-columns:1fr 1fr}}
+    .visor-specs div{background:var(--card);border:1px solid var(--border);border-radius:8px;
+      padding:.45rem .6rem;font-size:.82rem;line-height:1.35}
+    .visor-specs b{color:var(--acc);display:block;font-size:.72rem;text-transform:uppercase;
+      letter-spacing:.4px;font-weight:600}
+    .visor-estado{padding:2rem;text-align:center;color:var(--muted)}
     .card-img{
       width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;margin-bottom:1rem}
     .card-img img{
@@ -136,8 +176,11 @@
     <div class="grid">
       {% for p in items %}
       <!-- Tarjeta SIN enlace a tiendas externas (pedido 29/09/2026):
-           el clic se queda en la página; se muestra marca + modelo. -->
-      <div class="card" data-brand="{{ marca }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ marca)|lower }}">
+           el clic se queda en la página; abre la galería del modelo. -->
+      <div class="card" data-id="{{ p.id }}" data-brand="{{ marca }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ marca)|lower }}">
+        {% if p.images|length > 1 %}
+        <span class="foto-badge">📷 {{ p.images|length }}</span>
+        {% endif %}
         <div class="card-img">
           {% if p.images %}
             <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
@@ -160,6 +203,27 @@
 <footer>
   <p>Angelo · @angelo.py · Encarnación, Paraguay</p>
 </footer>
+
+<!-- ===== Visor de fotos: al tocar un modelo se ven TODAS sus fotos + datos ===== -->
+<div class="visor" id="visor" aria-hidden="true">
+  <div class="visor-caja" role="dialog" aria-modal="true">
+    <button class="visor-cerrar" id="visorCerrar" aria-label="Cerrar">✕</button>
+    <div class="visor-foto">
+      <button class="visor-flecha izq" id="visorPrev" aria-label="Foto anterior">‹</button>
+      <img id="visorImg" alt="" style="display:none">
+      <div class="visor-estado" id="visorEstado">Cargando…</div>
+      <button class="visor-flecha der" id="visorNext" aria-label="Foto siguiente">›</button>
+      <span class="visor-cont" id="visorCont" style="display:none"></span>
+    </div>
+    <div class="visor-mini" id="visorMini"></div>
+    <div class="visor-info">
+      <div class="visor-marca" id="visorMarca"></div>
+      <div class="visor-ref" id="visorRef"></div>
+      <div class="visor-nombre" id="visorNombre"></div>
+      <div class="visor-specs" id="visorSpecs"></div>
+    </div>
+  </div>
+</div>
 
 <!-- Selector de fondo: negro · gris · azul oscuro · verde oscuro -->
 <div class="temas" title="Cambiar color de fondo">
@@ -211,6 +275,112 @@
     buscador.addEventListener('input',aplicar);
     aplicar();
   })();
+</script>
+
+<script>
+/* ===== Galería: tocar un modelo abre todas sus fotos + especificaciones ===== */
+(function(){
+  var visor=document.getElementById('visor');
+  var vImg=document.getElementById('visorImg');
+  var vEst=document.getElementById('visorEstado');
+  var vCont=document.getElementById('visorCont');
+  var vMini=document.getElementById('visorMini');
+  var vMarca=document.getElementById('visorMarca');
+  var vRef=document.getElementById('visorRef');
+  var vNom=document.getElementById('visorNombre');
+  var vSpecs=document.getElementById('visorSpecs');
+  var fotos=[], i=0, cargando=null;
+
+  function pintar(){
+    if(!fotos.length){vImg.style.display='none';vCont.style.display='none';return;}
+    vImg.src=fotos[i];
+    vImg.style.display='';
+    vEst.style.display='none';
+    vCont.style.display='';
+    vCont.textContent=(i+1)+' / '+fotos.length;
+    [].forEach.call(vMini.children,function(t,k){t.classList.toggle('sel',k===i)});
+  }
+  function mover(d){
+    if(!fotos.length)return;
+    i=(i+d+fotos.length)%fotos.length;
+    pintar();
+  }
+  function abrir(id){
+    visor.classList.add('on');
+    visor.setAttribute('aria-hidden','false');
+    document.body.style.overflow='hidden';
+    fotos=[];i=0;
+    vImg.style.display='none';vCont.style.display='none';vMini.innerHTML='';
+    vEst.style.display='';vEst.textContent='Cargando…';
+    vMarca.textContent='';vRef.textContent='';vNom.textContent='';vSpecs.innerHTML='';
+    if(cargando&&cargando.abort)cargando.abort();
+    cargando=fetch('/api/ficha/'+id)
+      .then(function(r){if(!r.ok)throw 0;return r.json()})
+      .then(function(p){
+        vMarca.textContent=p.marca||'';
+        vRef.textContent=p.reference||'';
+        vNom.textContent=(p.name||'').toUpperCase();
+        fotos=p.images||[];
+        var claves=Object.keys(p.specs||{});
+        if(claves.length){
+          claves.forEach(function(k){
+            var d=document.createElement('div');
+            var b=document.createElement('b');
+            b.textContent=k;
+            d.appendChild(b);
+            d.appendChild(document.createTextNode(p.specs[k]));
+            vSpecs.appendChild(d);
+          });
+        }else{
+          vSpecs.innerHTML='<div style="grid-column:1/-1;color:var(--muted)">Sin datos técnicos disponibles.</div>';
+        }
+        if(!fotos.length){
+          vEst.style.display='';vEst.textContent='Sin fotos disponibles.';
+          return;
+        }
+        fotos.forEach(function(u,k){
+          var t=document.createElement('img');
+          t.loading='lazy';t.src=u;t.alt=(p.reference||'')+' '+(k+1);
+          t.onclick=function(){i=k;pintar()};
+          vMini.appendChild(t);
+        });
+        i=0;pintar();
+      })
+      .catch(function(){
+        vEst.style.display='';
+        vEst.textContent='No se pudo cargar la ficha. Probá de nuevo.';
+      });
+  }
+  function cerrar(){
+    visor.classList.remove('on');
+    visor.setAttribute('aria-hidden','true');
+    document.body.style.overflow='';
+  }
+
+  document.addEventListener('click',function(e){
+    var c=e.target.closest?e.target.closest('.card[data-id]'):null;
+    if(c)abrir(c.dataset.id);
+  });
+  document.getElementById('visorCerrar').onclick=cerrar;
+  document.getElementById('visorPrev').onclick=function(){mover(-1)};
+  document.getElementById('visorNext').onclick=function(){mover(1)};
+  visor.addEventListener('click',function(e){if(e.target===visor)cerrar()});
+  document.addEventListener('keydown',function(e){
+    if(!visor.classList.contains('on'))return;
+    if(e.key==='Escape')cerrar();
+    if(e.key==='ArrowLeft')mover(-1);
+    if(e.key==='ArrowRight')mover(1);
+  });
+  /* Swipe en celular */
+  var x0=null;
+  visor.addEventListener('touchstart',function(e){x0=e.touches[0].clientX},{passive:true});
+  visor.addEventListener('touchend',function(e){
+    if(x0===null)return;
+    var dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>45)mover(dx<0?1:-1);
+    x0=null;
+  },{passive:true});
+})();
 </script>
 
 </body>
