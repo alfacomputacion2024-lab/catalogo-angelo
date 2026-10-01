@@ -32,8 +32,15 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FOTOS = os.path.join(REPO, "data", "imagenes", "casio_oficial")
 OUT = os.path.join(os.path.dirname(REPO), "Casio_Oficial_por_Linea.zip")
-SRC_JSONL = os.path.join(os.environ.get("TEMP", "/tmp"), "opencode",
-                         "casio_rows.jsonl")
+# respaldo del scrapeo: primero la copia del repo (portátil, no se pierde si
+# limpian %TEMP%), y si no la carpeta temporal de trabajo
+_SRC_CANDIDATOS = [
+    os.path.join(REPO, "data", "casio_rows.jsonl"),
+    os.path.join(os.environ.get("TEMP", "/tmp"), "opencode",
+                 "casio_rows.jsonl"),
+]
+SRC_JSONL = next((p for p in _SRC_CANDIDATOS if os.path.isfile(p)),
+                 _SRC_CANDIDATOS[0])
 
 LINEAS = {"casio": "Casio", "gshock": "G-Shock", "babyg": "Baby-G",
           "edifice": "Edifice", "protrek": "Pro Trek", "oceanus": "Oceanus"}
