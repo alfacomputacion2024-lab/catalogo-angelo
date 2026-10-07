@@ -30,6 +30,7 @@ import io
 import re
 import sqlite3
 import tempfile
+import time
 from functools import wraps
 from urllib.parse import urlencode
 
@@ -91,10 +92,75 @@ app.jinja_env.filters['short_brand'] = short_brand
 def header_pills():
     """Conteo de productos activos agrupados por marca visible (orden desc)."""
     counts = {}
-    for p in db.query_products(status="active"):
+    for p in db.query_products(status="active", parse_specs=False):
         lbl = watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url"))
         counts[lbl] = counts.get(lbl, 0) + 1
     return sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+
+
+# --- Caché de las páginas públicas -------------------------------------------
+# /client y /catalogo listan los 3.000+ productos: calcularlos en cada visita
+# cuesta ~1,5 s en producción. Se guarda el resultado y solo se recalcula si
+# cambió la base (mtime del catalogo.db) o venció el tiempo máximo (TTL).
+_CACHE: dict = {}
+_CACHE_TTL = 300  # segundos
+
+
+def _db_fresca():
+    """mtime de la base; si no se puede leer, devuelve 0 (fuerza recálculo)."""
+    try:
+        return os.path.getmtime(config.DB_PATH)
+    except OSError:
+        return 0.0
+
+
+def _entrar_cache(clave, calcular):
+    """Valor cacheado en `clave`; lo recalcula si la base cambió o venció el TTL.
+
+    El mtime se toma ANTES de calcular: si alguien escribe mientras se calcula,
+    la próxima petición ve un mtime distinto y vuelve a calcular. Así un cambio
+    del panel se ve al instante en las páginas públicas.
+    """
+    f = _db_fresca()
+    ent = _CACHE.get(clave)
+    if ent is not None and ent[0] == f and (time.time() - ent[1]) < _CACHE_TTL:
+        return ent[2]
+    _CACHE[clave] = (f, time.time(), calcular())
+    return _CACHE[clave][2]
+
+
+def _client_html():
+    """HTML de /client: público, sin sesión ni precios (cacheable tal cual)."""
+    products = db.query_products(status="active", parse_specs=False)
+    # Agrupar por MARCA REAL (nunca la tienda de origen) y ordenar cada grupo
+    # por modelo (nombre -> referencia); las marcas, en orden alfabético.
+    grupos = {}
+    for p in products:
+        marca = watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url"))
+        grupos.setdefault(marca, []).append(p)
+    for items in grupos.values():
+        items.sort(key=lambda p: ((p.get("name") or "").lower(), p.get("reference") or ""))
+    grupos = {m: grupos[m] for m in sorted(grupos)}
+    return render_template("client_catalog.html", grupos=grupos, marcas=list(grupos),
+                           theme=json.loads(config.THEME_PATH.read_text(encoding="utf-8")))
+
+
+def _catalogo_datos():
+    """(productos ordenados por marca->modelo, pills con conteos) de /catalogo.
+
+    El HTML de /catalogo sí depende del login (muestra Salir/Editar), por eso
+    se cachea este cálculo y no la página final.
+    """
+    products = db.query_products(status="active", parse_specs=False)
+    for p in products:
+        p["_marca"] = watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url"))
+    products.sort(key=lambda p: (p["_marca"], (p.get("name") or "").lower(),
+                                 p.get("reference") or ""))
+    conteos = {}
+    for p in products:
+        conteos[p["_marca"]] = conteos.get(p["_marca"], 0) + 1
+    pills = sorted(conteos.items(), key=lambda kv: (-kv[1], kv[0]))
+    return products, pills
 
 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
@@ -211,10 +277,13 @@ def img(p):
             return Response(data, content_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
         except Exception:
             abort(404)
-    # Si el archivo local existe, servirlo
+    # Si el archivo local existe, servirlo (cache 1 h: las fotos pesan ~47 KB y
+    # casi nunca cambian; si reemplazás una, el navegador la toma en ≤1 hora)
     local = config.IMAGES_DIR / p
     if local.exists():
-        return send_from_directory(config.IMAGES_DIR, p)
+        resp = send_from_directory(config.IMAGES_DIR, p)
+        resp.headers["Cache-Control"] = "public, max-age=3600"
+        return resp
     # Si no existe (ej: en Render), devolver 1x1 pixel transparente
     import base64
     PIXEL = base64.b64decode("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
@@ -229,7 +298,9 @@ def static_files(p):
         abort(404)
     if not os.path.isfile(os.path.join(_BASE_DIR, p)):
         abort(404)
-    return send_from_directory(_BASE_DIR, p)
+    resp = send_from_directory(_BASE_DIR, p)
+    resp.headers["Cache-Control"] = "public, max-age=86400"   # logos/favicon: 1 día
+    return resp
 
 
 # =============================================================================
@@ -376,16 +447,11 @@ def catalogo():
     brand = request.args.get("brand", "")
     page = request.args.get("page", 1, type=int)
     per_page = 60
-    products = db.query_products(status="active")
-    # Etiqueta de marca REAL por producto (nunca la tienda de origen)
-    for p in products:
-        p["_marca"] = watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url"))
+    # Productos ordenados + pills desde la caché (calcularlos cuesta ~1,5 s);
+    # el HTML final sí se pinta por visita porque varía con el login.
+    products, pills = _entrar_cache("catalogo", _catalogo_datos)
     if brand:
         products = [p for p in products if p["_marca"] == brand]
-    # Orden: marca -> modelo
-    products.sort(key=lambda p: (p["_marca"], (p.get("name") or "").lower(),
-                                 p.get("reference") or ""))
-    pills = header_pills()                       # [(marca, total)] ordenado desc
     pill_counts = dict(pills)
     total_all = sum(pill_counts.values())
     # Paginar sobre la lista ya ordenada
@@ -409,18 +475,10 @@ def catalogo():
 # =============================================================================
 @app.route("/client")
 def client_catalog():
-    products = db.query_products(status="active")
-    # Agrupar por MARCA REAL del producto (nunca la tienda de origen) y
-    # ordenar cada grupo por modelo (nombre -> referencia).
-    grupos = {}
-    for p in products:
-        marca = watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url"))
-        grupos.setdefault(marca, []).append(p)
-    for items in grupos.values():
-        items.sort(key=lambda p: ((p.get("name") or "").lower(), p.get("reference") or ""))
-    grupos = {m: grupos[m] for m in sorted(grupos)}  # marcas en orden alfabético
-    return render_template("client_catalog.html", grupos=grupos, marcas=list(grupos),
-                           theme=json.loads(config.THEME_PATH.read_text(encoding="utf-8")))
+    # HTML calculado una vez y cacheado (idéntico para todos: sin sesión ni
+    # precios). El cálculo vive en _client_html(); la invalidez, en _entrar_cache().
+    html = _entrar_cache("client", _client_html)
+    return Response(html, content_type="text/html; charset=utf-8")
 
 
 # =============================================================================

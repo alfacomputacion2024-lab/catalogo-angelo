@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS products (
     created_at  TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(brand, reference)
 );
+CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
 """
 
 
@@ -83,15 +84,17 @@ def url_exists(url: str) -> bool:
         return conn.execute("SELECT 1 FROM products WHERE url=?", (url,)).fetchone() is not None
 
 
-def row_to_dict(row) -> dict:
+def row_to_dict(row, parse_specs=True):
     d = dict(row)
-    d["specs"] = json.loads(d.get("specs") or "{}")
+    # parse_specs=False: las páginas de listado no usan las especificaciones;
+    # saltarse sus JSON ahorra ~1/3 del tiempo de consulta en listados grandes.
+    d["specs"] = json.loads(d.get("specs") or "{}") if parse_specs else {}
     d["images"] = json.loads(d.get("images") or "[]")
     return d
 
 
 def query_products(brand=None, line=None, gender=None, q=None, status="active", ids=None,
-                   marca=None):
+                   marca=None, parse_specs=True):
     """marca = etiqueta real visible (watch_brand); brand = columna cruda."""
     sql = "SELECT * FROM products WHERE 1=1"
     args = []
@@ -115,7 +118,8 @@ def query_products(brand=None, line=None, gender=None, q=None, status="active", 
         args += list(ids)
     sql += " ORDER BY brand, line, reference"
     with get_conn() as conn:
-        rows = [row_to_dict(r) for r in conn.execute(sql, args).fetchall()]
+        rows = [row_to_dict(r, parse_specs=parse_specs)
+                for r in conn.execute(sql, args).fetchall()]
     if marca:
         rows = [p for p in rows
                 if watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url")) == marca]

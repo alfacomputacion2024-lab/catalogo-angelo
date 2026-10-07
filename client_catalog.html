@@ -4,7 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Angelo - Catálogo de Relojes</title>
-  <link rel="icon" type="image/png" href="/static/logo_A.png">
+  <meta name="description" content="Catálogo Angelo: relojes originales Casio, G-Shock, Baby-G, Tommy Hilfiger, Tissot y más, con fotos y fichas técnicas. Encarnación, Paraguay.">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta property="og:title" content="Angelo - Catálogo de Relojes">
+  <meta property="og:description" content="Relojes originales con fotos oficiales y fichas técnicas. Mirá el catálogo completo.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://catalogo-angelo.onrender.com/client">
+  <meta property="og:image" content="https://catalogo-angelo.onrender.com/static/logo.PNG">
+  <link rel="icon" type="image/png" href="/static/favicon_A.png">
   <style>
     :root{
       --bg:#0a0a0f; --surface:#12121a; --card:#1a1a24;
@@ -183,7 +190,7 @@
         {% endif %}
         <div class="card-img">
           {% if p.images %}
-            <img loading="lazy" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
+            <img loading="lazy" decoding="async" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
           {% else %}
             <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
           {% endif %}
@@ -272,7 +279,9 @@
       pills.forEach(function(x){x.classList.toggle('sel',x===b)});
       aplicar();
     }});
-    buscador.addEventListener('input',aplicar);
+    /* 120 ms de espera: en el celular cada tecla repintaba 3.000+ tarjetas */
+    var t=null;
+    buscador.addEventListener('input',function(){clearTimeout(t);t=setTimeout(aplicar,120)});
     aplicar();
   })();
 </script>

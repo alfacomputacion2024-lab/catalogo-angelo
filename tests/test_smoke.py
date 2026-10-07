@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from app import app  # noqa: E402
+from app import _entrar_cache  # noqa: E402
 from app import watch_brand  # noqa: E402
 import respaldo  # noqa: E402
 
@@ -94,11 +95,30 @@ check("/static/app.py -> 404", C.get("/static/app.py").status_code == 404)
 check("/static/../app.py -> 404", C.get("/static/../app.py").status_code == 404)
 r = C.get("/static/logo_A.png")
 check("favicon /static/logo_A.png -> 200", r.status_code == 200)
+r = C.get("/static/favicon_A.png")
+check("favicon ligero /static/favicon_A.png -> 200 (< 50 KB)",
+      r.status_code == 200 and len(r.data) < 50 * 1024)
 
 print("— fotos —")
 r = C.get("/img/casio_oficial/A158WA-1.jpg")
 check("foto oficial local /img -> 200 image/jpeg",
       r.status_code == 200 and (r.mimetype or "").startswith("image/"))
+check("foto local en caché (Cache-Control public max-age=3600)",
+      "public" in (r.headers.get("Cache-Control") or "")
+      and "max-age=3600" in (r.headers.get("Cache-Control") or ""))
+
+_n = [0]
+
+
+def _calc():
+    _n[0] += 1
+    return _n[0]
+
+
+check("caché de páginas memoriza el primer cálculo",
+      _entrar_cache("test_smoke", _calc) == 1
+      and _entrar_cache("test_smoke", _calc) == 1
+      and _n[0] == 1)
 
 print("— galería del modelo (visor de fotos) —")
 html_client = C.get("/client").data.decode("utf-8")
