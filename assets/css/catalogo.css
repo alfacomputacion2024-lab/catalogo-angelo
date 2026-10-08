@@ -1,0 +1,155 @@
+/* =========================================================
+   CATALOGO ANGELO · catalogo.css
+   Estilos SOLO del catálogo de clientes (/client y sus
+   páginas de marca y tipo): barra de filtros, tarjetas,
+   ficha ampliada (visor), favoritos y colecciones.
+   Lo compartido está en base.css
+   ========================================================= */
+
+/* --- Buscador + filtro por marca (barra pegajosa arriba) --- */
+.filtros{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--border);padding:.7rem 1.2rem}
+.filtros .inner{max-width:1200px;margin:auto;display:flex;flex-direction:column;gap:.6rem}
+#buscador{width:100%;padding:.65rem 1rem;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--ink);font:inherit;outline:none}
+#buscador:focus{border-color:var(--acc)}
+.pills-row{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
+.pills{display:flex;flex-wrap:wrap;gap:.45rem}
+.pill{border:1px solid var(--border);background:transparent;color:var(--acc);border-radius:999px;padding:.3rem .8rem;font-size:.8rem;cursor:pointer;transition:all .2s;font-family:inherit;
+  display:inline-block;text-decoration:none}         /* enlace a la página de la marca */
+.pill:hover{border-color:var(--acc);color:#FFE08A}
+.pill.sel{background:var(--acc);color:#111;font-weight:700}
+.contador{font-size:.78rem;color:var(--muted);white-space:nowrap}
+
+/* --- Miga de pan (Inicio › Catálogo › Marca) --- */
+.miga{display:flex;gap:.45rem;align-items:center;font-size:.75rem;color:var(--muted);flex-wrap:wrap}
+.miga a{color:var(--muted);text-decoration:none}
+.miga a:hover{color:var(--acc)}
+.miga b{color:var(--acc);font-weight:600}
+
+/* --- Zona de productos --- */
+main{max-width:1200px;padding:2rem;margin:auto;scroll-margin-top:120px}
+.section{margin-bottom:2rem}
+.brand-header{color:var(--acc);font-size:1.8rem;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:.5rem}
+.brand-header span{font-size:.85rem;color:var(--muted);font-weight:400;letter-spacing:0;margin-left:.5rem}
+
+/* --- Grid --- */
+.grid{display:grid;gap:1.5rem}
+@media(min-width:768px){.grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}}
+@media(min-width:1200px){.grid{grid-template-columns:repeat(4,1fr)}}
+
+/* --- Tarjeta de producto (sin enlace a tiendas externas:
+       el clic se queda en la página y abre la galería) --- */
+.card{background:var(--card);border:1px solid transparent;border-radius:12px;padding:1.5rem;
+  text-decoration:none;color:var(--ink);transition:transform .2s,box-shadow .2s;cursor:pointer;
+  position:relative}
+.card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.4);border-color:var(--acc)}
+.card-img{width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;margin-bottom:1rem}
+.card-img img{width:100%;height:100%;object-fit:contain;background:#111;transition:transform .3s ease}
+.card:hover .card-img img{transform:scale(1.05)}     /* zoom suave, la foto sigue completa */
+.card-body .ref{color:var(--muted);font-size:.85rem;margin-bottom:.3rem;display:block}
+.card-body .name{font-size:1.1rem;margin-bottom:.5rem;display:block;min-height:2.2rem}
+.card-body .brand{color:var(--acc);font-size:.8rem;text-transform:uppercase;margin-bottom:.3rem;display:block}
+/* Aviso de fotos extras: invita a tocar el modelo */
+.foto-badge{position:absolute;top:.7rem;right:.7rem;background:rgba(0,0,0,.72);color:var(--acc);
+  border:1px solid var(--acc-dim);border-radius:999px;font-size:.7rem;padding:.15rem .5rem;
+  display:flex;align-items:center;gap:.25rem;z-index:2}
+
+/* --- Sin resultados --- */
+.empty{text-align:center;padding:3rem;color:var(--muted)}
+/* Modelo sin foto / sin ficha técnica */
+.sin-foto{height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.sin-specs{grid-column:1/-1;color:var(--muted)}
+
+/* --- Colecciones destacadas (tiles tipo Casio): clic = filtra esa marca --- */
+.colec{margin-bottom:2.4rem}
+.colec-h{font-size:.95rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);
+  font-weight:600;margin-bottom:.9rem;border-bottom:1px solid var(--border);padding-bottom:.5rem}
+.colec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.9rem}
+.colec-tile{display:block;width:100%;background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:0;overflow:hidden;cursor:pointer;font:inherit;color:inherit;
+  text-align:left;transition:transform .2s,border-color .2s;text-decoration:none}
+.colec-tile:hover{transform:translateY(-3px);border-color:var(--acc)}
+.colec-tile img{display:block;width:100%;aspect-ratio:1;object-fit:contain;background:#111}
+.colec-tile span{display:block;padding:.55rem .75rem .7rem}
+.colec-tile b{display:block;font-size:.82rem;text-transform:uppercase;letter-spacing:.5px;color:var(--ink)}
+.colec-tile i{font-style:normal;font-size:.7rem;color:var(--muted)}
+
+/* --- Favoritos (corazón: lo inyecta JavaScript, la página no engorda) --- */
+.fb{position:absolute;top:.6rem;left:.6rem;z-index:3;width:34px;height:34px;border-radius:50%;
+  background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.28);color:rgba(255,255,255,.65);
+  font-size:1.05rem;line-height:1;cursor:pointer;transition:all .15s;padding:0}
+.fb:hover{border-color:#e2555f;color:#e2555f}
+.fb.on{color:#e2555f;border-color:#e2555f;background:rgba(0,0,0,.75)}
+.nav-fav.sel{color:#e2555f}
+
+/* --- Carrito de interés: botones en tarjeta y en la ficha --- */
+.fadd{display:block;width:100%;margin-top:.6rem;padding:.42rem .6rem;border-radius:8px;
+  border:1px solid var(--acc);background:transparent;color:var(--acc);
+  font:600 .78rem 'Montserrat',sans-serif;cursor:pointer;transition:all .15s}
+.fadd:hover{background:var(--acc);color:#111}
+.fadd.on{background:var(--acc);color:#111;font-weight:700}
+.btn-vcar{display:block;width:100%;margin-top:.9rem;padding:.7rem;border-radius:10px;
+  border:1px solid var(--acc);background:transparent;color:var(--acc);
+  font:700 .9rem 'Montserrat',sans-serif;cursor:pointer;transition:all .15s}
+.btn-vcar:hover{background:var(--acc);color:#111}
+.btn-vcar.on{background:var(--acc);color:#111}
+
+/* --- Chip de "tipo de producto" activo (llegado desde la portada) --- */
+.tipo-chip{border:1px solid var(--acc);background:var(--acc);color:#111;font-weight:700;
+  border-radius:999px;padding:.3rem .8rem;font-size:.8rem;cursor:pointer;font-family:inherit}
+.tipo-chip:hover{filter:brightness(1.1)}
+
+/* ===== Visor de fotos: al tocar un modelo se ven TODAS sus fotos + datos ===== */
+.visor{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;
+  justify-content:center;padding:1rem;z-index:200}
+.visor.on{display:flex}
+.visor-caja{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  width:100%;max-width:920px;max-height:94vh;overflow:auto;position:relative}
+.visor-cerrar{position:absolute;top:.6rem;right:.6rem;width:38px;height:38px;border-radius:50%;
+  border:1px solid var(--border);background:var(--card);color:var(--ink);font-size:1.4rem;
+  line-height:1;cursor:pointer;z-index:3}
+.visor-cerrar:hover{border-color:var(--acc);color:var(--acc)}
+.visor-foto{position:relative;background:#0d0d12;min-height:240px;display:flex;align-items:center;
+  justify-content:center;padding:1.4rem 2.8rem .6rem}
+.visor-foto img{max-width:100%;max-height:56vh;object-fit:contain}  /* SIEMPRE completa, sin recorte */
+.visor-flecha{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;
+  border-radius:50%;border:1px solid var(--border);background:rgba(26,26,36,.9);color:var(--acc);
+  font-size:1.5rem;line-height:1;cursor:pointer;z-index:2}
+.visor-flecha:hover{background:var(--acc);color:#111}
+.visor-flecha.izq{left:.5rem}
+.visor-flecha.der{right:.5rem}
+.visor-cont{position:absolute;bottom:.5rem;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.6);color:var(--ink);font-size:.75rem;padding:.1rem .6rem;border-radius:999px}
+.visor-mini{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;padding:.6rem 1rem 0}
+.visor-mini img{width:52px;height:52px;object-fit:contain;background:#111;border:2px solid transparent;
+  border-radius:8px;cursor:pointer;opacity:.65}
+.visor-mini img.sel{border-color:var(--acc);opacity:1}
+.visor-info{padding:1rem 1.2rem 1.3rem}
+.visor-marca{color:var(--acc);font-size:.8rem;text-transform:uppercase;letter-spacing:.6px}
+.visor-ref{font-size:1.3rem;font-weight:700;margin-top:.15rem}
+.visor-nombre{color:var(--muted);font-size:.95rem}
+.visor-specs{margin-top:.9rem;display:grid;grid-template-columns:1fr;gap:.35rem}
+@media(min-width:640px){.visor-specs{grid-template-columns:1fr 1fr}}
+.visor-specs div{background:var(--card);border:1px solid var(--border);border-radius:8px;
+  padding:.45rem .6rem;font-size:.82rem;line-height:1.35}
+.visor-specs b{color:var(--acc);display:block;font-size:.72rem;text-transform:uppercase;
+  letter-spacing:.4px;font-weight:600}
+.visor-estado{padding:2rem;text-align:center;color:var(--muted)}
+
+/* --- Tema claro: ajustes para leer sobre blanco --- */
+:root[data-tema="claro"] .card-img img,
+:root[data-tema="claro"] .colec-tile img{background:#f0f0f4}
+:root[data-tema="claro"] .pill.sel{color:#fff}
+:root[data-tema="claro"] .fb{background:rgba(255,255,255,.92);border-color:rgba(0,0,0,.22);color:#9a9aa8}
+:root[data-tema="claro"] .visor-foto{background:#f2f2f5}
+
+/* --- Teléfono: las marcas en UNA fila deslizable --- */
+@media(max-width:768px){
+  .pills-row{flex-wrap:nowrap}
+  .pills{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .contador{display:none}
+  .filtros{padding:.6rem .9rem}
+}
+@media(max-width:640px){
+  .brand-header{font-size:1.4rem}
+  .colec-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+}

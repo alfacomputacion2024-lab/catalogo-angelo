@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Angelo — Catálogo de relojes originales | Encarnación, Paraguay</title>
+  <meta name="description" content="Relojes originales Casio, G-Shock, Baby-G, Tommy Hilfiger, Tissot y más con fotos y ficha técnica. Buscá por marca o tipo. Encarnación, Paraguay.">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta property="og:title" content="Angelo — Catálogo de relojes originales">
+  <meta property="og:description" content="Relojes originales con fotos oficiales y fichas técnicas. Buscá por marca o tipo.">
+  <meta property="og:type" content="website">
+  <link rel="icon" type="image/png" href="/static/favicon_A.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Hojas de estilo: base.css = común · portada.css = esta página -->
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/portada.css">
+  <!-- Tema elegido, aplicado antes de pintar (sin parpadeo) -->
+  <script src="/assets/js/tema.js"></script>
+</head>
+<body data-wa="{{ whatsapp }}" data-ruta-catalogo="{{ ruta_catalogo }}">
+
+<header id="top">
+  <div class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7h3v10H2V7zm8 4H7v10h10V7zm-9 8c.83 0 1.5-.67 1.5-1.5S8.83 5 8 5S6.5 5.67 6.5 6.5 6.5 8 6.5 8Zm0 2C5.13 8 3 10.13 3 12s2.13 4 5 4 5-2.13 5-4-2.13-5-5-4Z"/></svg>
+      Angelo
+    </div>
+    <nav class="nav">
+      <a href="{{ ruta_catalogo }}">Catálogo</a>
+      <button type="button" id="cartNav" class="nav-fav" title="Ver tu carrito de interés">🛒 <span id="cartN">0</span></button>
+    </nav>
+  </div>
+</header>
+
+<!-- ===== PORTADA EN BLANCO: buscador + 6 menús (con 3 ejemplos c/u) + marcas ===== -->
+<main>
+  <section class="hero">
+    <h1>Relojes originales<span>fotos oficiales y ficha técnica</span></h1>
+    <p>Casio, G-Shock, Tommy Hilfiger, Tissot y más. Buscá por referencia, modelo o marca —
+       o elegí un tipo de producto aquí abajo.</p>
+    <form class="busca" id="buscaForm" action="{{ ruta_catalogo }}" method="get">
+      <input id="buscadorP" name="q" type="search" placeholder="🔍 Buscar por referencia, modelo o marca…" autocomplete="off">
+      <button type="submit">Buscar</button>
+    </form>
+  </section>
+
+  <!-- Los 6 menús del catálogo; cada uno muestra 3 modelos de ejemplo -->
+  <section class="sec">
+    <div class="sec-h">Tipos de producto <i>elegí uno y se abre su página</i></div>
+    <div class="tipo-grid">
+      {% for clave, nombre, n in tipos %}
+      <a class="tipo-tile" href="{{ link_tipo[clave] }}" data-tipo="{{ clave }}">
+        <b>{{ nombre }}</b><i>{{ "{:,}".format(n).replace(",", ".") }} modelos</i>
+        <span class="tipo-ejs">
+          {% for e in ejemplos.get(clave, []) %}
+          <span class="ej">
+            <img src="{{ e.img }}" alt="{{ e.marca }} {{ e.ref }}" loading="lazy" decoding="async">
+            <span>{{ e.ref }}</span>
+          </span>
+          {% endfor %}
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h">Todas las marcas <i>{{ marcas_conteo|length }} marcas</i></div>
+    <div class="pills-grid">
+      {% for m, n in marcas_conteo %}
+      <a class="pill" data-marca="{{ m }}" href="{{ link_marca[m] }}">{{ m }}<span>{{ "{:,}".format(n).replace(",", ".") }}</span></a>
+      {% endfor %}
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>Angelo · @angelo.py · Encarnación, Paraguay</p>
+</footer>
+
+<!-- ===== Carrito de interés ===== -->
+<div class="sombra" id="carSombra"></div>
+<aside class="carrito" id="carrito" aria-hidden="true" aria-label="Carrito de interés">
+  <div class="carrito-h"><b>🛒 MI INTERÉS</b><button type="button" id="carCerrar" aria-label="Cerrar carrito">✕</button></div>
+  <div class="carrito-l" id="carLista"></div>
+  <div class="carrito-f">
+    <button type="button" class="btn-wa" id="carWa" hidden>Enviar pedido por WhatsApp</button>
+    <button type="button" class="btn-copiar" id="carCopiar">Copiar lista</button>
+    <button type="button" class="btn-vaciar" id="carVaciar">Vaciar carrito</button>
+  </div>
+</aside>
+
+<!-- Selector de fondo: claro (blanco, estilo Casio) · negro · gris · azul · verde -->
+<div class="temas" title="Cambiar color de fondo">
+  <button data-tema="claro" title="Claro (blanco, estilo Casio)" aria-label="Fondo claro"></button>
+  <button data-tema="negro" title="Negro" aria-label="Fondo negro"></button>
+  <button data-tema="gris" title="Gris" aria-label="Fondo gris"></button>
+  <button data-tema="azul" title="Azul oscuro" aria-label="Fondo azul oscuro"></button>
+  <button data-tema="verde" title="Verde oscuro" aria-label="Fondo verde oscuro"></button>
+</div>
+
+<!-- Comportamiento: carrito de interés (compartido con el catálogo) -->
+<script src="/assets/js/comun.js"></script>
+</body>
+</html>

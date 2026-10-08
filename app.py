@@ -5,6 +5,10 @@ Rutas principales
     /             Panel admin (requiere login)
     /catalogo     Catálogo online con edición (login para editar/eliminar)
     /client       Catálogo SOLO-LECTURA para clientes y revendedores (público)
+    /portada      Portada liviana: buscador + 6 menús + marcas (pública)
+    /marca/<slug> Página de UNA marca (pública, sólo sus productos)
+    /tipo/<slug>  Página de UN tipo de producto (pública)
+    /assets/<r>   CSS y JS del sitio (sólo .css y .js)
     /login        Acceso (roles: admin y socio)
     /agregar      Alta manual de productos con fotos (login)
     /pdf          Generación de PDFs por marca (login)
@@ -31,6 +35,7 @@ import re
 import sqlite3
 import tempfile
 import time
+import unicodedata
 from functools import wraps
 from urllib.parse import urlencode
 
@@ -45,6 +50,19 @@ from marcas import short_brand, watch_brand
 from pdf_catalog import build_pdf
 
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def slug(texto):
+    """Nombre apto para URL y archivo: 'Q&Q' -> 'q-q', 'Pro Trek' -> 'pro-trek'.
+
+    Cada marca y cada tipo de producto tienen su propia página:
+        Flask     /marca/casio      /tipo/g-shock
+        estático  marcas/casio.html tipos/g-shock.html
+    El mismo slug se usa para el nombre del archivo, así que sirve en ambos modos.
+    """
+    t = unicodedata.normalize("NFKD", str(texto or "")).encode("ascii", "ignore").decode("ascii")
+    t = re.sub(r"[^a-zA-Z0-9]+", "-", t).strip("-").lower()
+    return t or "sin-nombre"
 
 
 def parse_price(value):
@@ -114,14 +132,17 @@ def _db_fresca():
         return 0.0
 
 
-def _entrar_cache(clave, calcular):
+def _entrar_cache(clave, calcular, firmas=None):
     """Valor cacheado en `clave`; lo recalcula si la base cambió o venció el TTL.
 
     El mtime se toma ANTES de calcular: si alguien escribe mientras se calcula,
     la próxima petición ve un mtime distinto y vuelve a calcular. Así un cambio
     del panel se ve al instante en las páginas públicas.
+
+    `firmas` agrega valores extra también invalidantes (p. ej. el mtime de la
+    plantilla: un rediseño de /client se ve al instante, sin reiniciar nada).
     """
-    f = _db_fresca()
+    f = (_db_fresca(),) + tuple(firmas or ())
     ent = _CACHE.get(clave)
     if ent is not None and ent[0] == f and (time.time() - ent[1]) < _CACHE_TTL:
         return ent[2]
@@ -129,20 +150,195 @@ def _entrar_cache(clave, calcular):
     return _CACHE[clave][2]
 
 
-def _client_html():
-    """HTML de /client: público, sin sesión ni precios (cacheable tal cual)."""
+def _client_html(estatico=False, solo_marca=None, solo_tipo=None):
+    """HTML del catálogo público: sin sesión ni precios (cacheable tal cual).
+
+    solo_marca / solo_tipo precargan el filtro EN EL SERVIDOR: la página de una
+    marca (o de un tipo) sólo trae SUS productos, así se pinta al instante y el
+    HTML no se repite 28 veces con los 3.084 productos. Lo usa /marca/<slug>,
+    /tipo/<slug> y exportar_estatico.py; el panel no.
+
+    `estatico=True` prepara la plantilla para vivir como "página normal"
+    (archivos planos, sin Python): la ficha se pide a /api/ficha/<id>.json
+    en vez de la ruta dinámica.
+    """
     products = db.query_products(status="active", parse_specs=False)
     # Agrupar por MARCA REAL (nunca la tienda de origen) y ordenar cada grupo
     # por modelo (nombre -> referencia); las marcas, en orden alfabético.
     grupos = {}
-    for p in products:
+    conteo_m = {}          # todas las marcas, aunque la página esté filtrada:
+    for p in products:     # las píldoras de arriba siguen mostrando el catálogo
         marca = watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url"))
+        conteo_m[marca] = conteo_m.get(marca, 0) + 1
+        if solo_marca and marca != solo_marca:
+            continue
+        if solo_tipo and not _coincide_tipo(p, solo_tipo, marca):
+            continue
         grupos.setdefault(marca, []).append(p)
     for items in grupos.values():
         items.sort(key=lambda p: ((p.get("name") or "").lower(), p.get("reference") or ""))
     grupos = {m: grupos[m] for m in sorted(grupos)}
-    return render_template("client_catalog.html", grupos=grupos, marcas=list(grupos),
-                           theme=json.loads(config.THEME_PATH.read_text(encoding="utf-8")))
+    marcas = [m for m, _n in sorted(conteo_m.items())]
+    # Tiles de "Colecciones": las 8 marcas con más modelos (sólo en la vista total)
+    destacadas = sorted(grupos.items(), key=lambda kv: -len(kv[1]))[:8]
+    # Título del navegador distinto en cada página de marca / tipo
+    if solo_marca:
+        pag, titulo = "marca", solo_marca
+    elif solo_tipo:
+        pag, titulo = "tipo", _nombre_tipo(solo_tipo)
+    else:
+        pag, titulo = "total", ""
+    return render_template("client_catalog.html", grupos=grupos, marcas=marcas,
+                           destacadas=destacadas, estatico=estatico,
+                           pag=pag, pag_titulo=titulo,
+                           marca_actual=solo_marca or "", tipo_actual=solo_tipo or "",
+                           # Número para el carrito de interés (vacío = botón oculto)
+                           whatsapp=os.environ.get("WHATSAPP_NUMERO", "").strip(),
+                           theme=json.loads(config.THEME_PATH.read_text(encoding="utf-8")),
+                           **_rutas(estatico, marcas))
+
+
+# --- Portada:6 tipos de producto (mixto colección + público, pedido 07/10) ---
+TIPOS_PORTADA = [
+    ("G-Shock", "G-Shock"),
+    ("Baby-G", "Baby-G"),
+    ("Edifice", "Edifice"),
+    ("Pro Trek", "Pro Trek"),
+    ("Dama", "Dama"),
+    ("Lentes", "Lentes y armazones"),
+]
+
+
+def _nombre_tipo(clave):
+    """Nombre para mostrar ('Lentes' -> 'Lentes y armazones')."""
+    for c, n in TIPOS_PORTADA:
+        if c == clave:
+            return n
+    return clave
+
+
+def _coincide_tipo(p, clave, marca):
+    """Criterio del tipo de producto. DEBE coincidir con coincideTipo() de
+    assets/js/catalogo.js (el conteo de la portada, las páginas /tipo/<slug>
+    y el filtro del catálogo tienen que dar el mismo número)."""
+    linea = (p.get("line") or "").lower().replace(" ", "")
+    gen = (p.get("gender") or "").lower()
+    if clave == "G-Shock":
+        return "g-shock" in linea
+    if clave == "Baby-G":
+        return "baby-g" in linea
+    if clave == "Edifice":
+        return "edifice" in linea
+    if clave == "Pro Trek":
+        return "protrek" in linea
+    if clave == "Dama":
+        return gen == "dama" or "dama" in linea
+    if clave == "Lentes":
+        return marca in ("Lentes", "Armazones")
+    return False
+
+
+def _rutas(estatico, marcas=None):
+    """Enlaces entre páginas, según el modo de funcionamiento.
+
+    Cada marca y cada tipo de producto tienen SU página (así el sitio se arma
+    con páginas y pestañas distintas, no con un único HTML gigante):
+
+        Flask      /marca/casio · /tipo/g-shock
+        estático   marcas/casio.html · tipos/g-shock.html · / y catalogo.html
+
+    Devuelve también los diccionarios link_marca / link_tipo, que usan las
+    plantillas para armar los href (una palabra por página, sin lógica en el HTML).
+    """
+    if estatico:
+        ruta_catalogo, ruta_portada = "/catalogo.html", "/"
+        pfx_m, pfx_t, suf = "/marcas/", "/tipos/", ".html"
+    else:
+        ruta_catalogo, ruta_portada = url_for("client_catalog"), url_for("portada")
+        pfx_m, pfx_t, suf = "/marca/", "/tipo/", ""
+    if marcas is None:
+        marcas = [m for m, _n in header_pills()]
+    return {
+        "ruta_catalogo": ruta_catalogo,
+        "ruta_portada": ruta_portada,
+        "link_marca": {m: pfx_m + slug(m) + suf for m in marcas},
+        "link_tipo": {clave: pfx_t + slug(clave) + suf for clave, _n in TIPOS_PORTADA},
+    }
+
+
+def _elegir_ejemplos(candidatos, limite=3):
+    """3 modelos de ejemplo (con foto) para el menú de la portada.
+
+    Prefiere referencias con forma de código de modelo (GA-2100, RB3025…)
+    y marcas/líneas variadas, para que la guía muestre distinta gama.
+    Devuelve dicts con id, marca, referencia y foto (/img/...).
+    """
+    con_foto = [p for p in candidatos if p.get("images")]
+
+    def _clave(p):
+        return (watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url")),
+                (p.get("line") or "").lower())
+
+    def _buena(p):
+        ref = p.get("reference") or ""
+        letras = sum(1 for ch in ref if ch.isalpha())
+        return 2 <= letras and len(ref) <= 18   # p. ej. GA-2100-1A1, no "1292"
+
+    elegidos, claves = [], set()
+
+    def _pasada(filtro, por_clave):
+        """Suma candidatos hasta `limite` sin repetir clave ni producto."""
+        for p in con_foto:
+            if len(elegidos) >= limite:
+                break
+            if p in elegidos or not filtro(p):
+                continue
+            k = _clave(p)
+            if por_clave:
+                if k in claves:
+                    continue
+                claves.add(k)
+            elegidos.append(p)
+
+    _pasada(_buena, True)           # 1ª: códigos de modelo, combinaciones distintas
+    _pasada(_buena, False)          # 2ª: más códigos de modelo
+    _pasada(lambda p: True, True)   # 3ª: otras combinaciones (marcas variadas)
+    _pasada(lambda p: True, False)  # 4ª: completa si aún faltan
+
+    return [{"id": p["id"],
+             "marca": watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url")),
+             "ref": p.get("reference") or p.get("name") or "",
+             "img": "/img/" + p["images"][0]}
+            for p in elegidos]
+
+
+def _portada_datos():
+    """(marcas con conteo alfabético, tipos con conteo, 3 ejemplos por tipo)."""
+    products = db.query_products(status="active", parse_specs=False)
+    conteo_m = {}
+    conteo_t = {clave: 0 for clave, _ in TIPOS_PORTADA}
+    candidatos = {clave: [] for clave, _ in TIPOS_PORTADA}
+    for p in products:
+        marca = watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url"))
+        conteo_m[marca] = conteo_m.get(marca, 0) + 1
+        for clave, _n in TIPOS_PORTADA:
+            if _coincide_tipo(p, clave, marca):
+                conteo_t[clave] += 1
+                candidatos[clave].append(p)
+    marcas = sorted(conteo_m.items())
+    tipos = [(clave, nombre, conteo_t[clave]) for clave, nombre in TIPOS_PORTADA]
+    ejemplos = {clave: _elegir_ejemplos(candidatos[clave]) for clave, _n in TIPOS_PORTADA}
+    return marcas, tipos, ejemplos
+
+
+def _portada_html(estatico=False):
+    """Portada liviana: buscador + 6 menús (con 3 ejemplos c/u) + todas las
+    marcas. SIN listado de productos: la primera página no carga nada pesado."""
+    marcas, tipos, ejemplos = _portada_datos()
+    return render_template("portada.html", marcas_conteo=marcas, tipos=tipos,
+                           ejemplos=ejemplos, estatico=estatico,
+                           whatsapp=os.environ.get("WHATSAPP_NUMERO", "").strip(),
+                           **_rutas(estatico, [m for m, _n in marcas]))
 
 
 def _catalogo_datos():
@@ -473,12 +669,74 @@ def catalogo():
 # =============================================================================
 # Catálogo para clientes (solo visual, sin admin, sin precios)
 # =============================================================================
+def _tpl_mtime(nombre):
+    """mtime de una plantilla; 0 si no existe (fuerza el recálculo)."""
+    try:
+        return os.path.getmtime(os.path.join(_BASE_DIR, _TPL_DIR, nombre))
+    except OSError:
+        return 0.0
+
+
+def _mapa_slugs():
+    """{'casio': 'Casio', 'q-q': 'Q&Q', ...} — cacheado, depende de la base."""
+    return {slug(m): m for m, _n in header_pills()}
+
+
 @app.route("/client")
 def client_catalog():
     # HTML calculado una vez y cacheado (idéntico para todos: sin sesión ni
     # precios). El cálculo vive en _client_html(); la invalidez, en _entrar_cache().
-    html = _entrar_cache("client", _client_html)
+    # firmas: el mtime de la plantilla invalida la caché si cambia el diseño.
+    html = _entrar_cache("client", _client_html,
+                         firmas=(_tpl_mtime("client_catalog.html"),))
     return Response(html, content_type="text/html; charset=utf-8")
+
+
+@app.route("/portada")
+def portada():
+    """Portada pública liviana: buscador + 6 menús + marcas, sin listado."""
+    html = _entrar_cache("portada", _portada_html,
+                         firmas=(_tpl_mtime("portada.html"),))
+    return Response(html, content_type="text/html; charset=utf-8")
+
+
+@app.route("/marca/<s>")
+def marca_pagina(s):
+    """Página de UNA marca: sólo sus productos, con su URL propia
+    (el HTML sale más liviano y cada marca se puede compartir por separado)."""
+    nombre = _entrar_cache("slugs_marcas", _mapa_slugs).get(slug(s))
+    if not nombre:
+        abort(404)
+    html = _entrar_cache("marca:" + slug(s),
+                         lambda: _client_html(solo_marca=nombre),
+                         firmas=(_tpl_mtime("client_catalog.html"),))
+    return Response(html, content_type="text/html; charset=utf-8")
+
+
+@app.route("/tipo/<s>")
+def tipo_pagina(s):
+    """Página de UN tipo de producto (los 6 menús de la portada)."""
+    clave = next((c for c, _n in TIPOS_PORTADA if slug(c) == slug(s)), None)
+    if not clave:
+        abort(404)
+    html = _entrar_cache("tipo:" + slug(s),
+                         lambda: _client_html(solo_tipo=clave),
+                         firmas=(_tpl_mtime("client_catalog.html"),))
+    return Response(html, content_type="text/html; charset=utf-8")
+
+
+@app.route("/assets/<path:archivo>")
+def assets(archivo):
+    """CSS y JS del sitio. Allowlist estricta: sólo *.css y *.js dentro de
+    assets/ — nunca otras carpetas ni el código Python del panel."""
+    if ".." in archivo or not re.search(r"\.(css|js)$", archivo):
+        abort(404)
+    base = os.path.join(_BASE_DIR, "assets")
+    if not os.path.isfile(os.path.join(base, archivo)):
+        abort(404)
+    resp = send_from_directory(base, archivo)
+    resp.headers["Cache-Control"] = "public, max-age=1800"
+    return resp
 
 
 # =============================================================================

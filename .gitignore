@@ -5,3 +5,4 @@ salida/
 data_demo/
 .env
 *.db
+sitio_publico/

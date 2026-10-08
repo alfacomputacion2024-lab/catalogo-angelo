@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Angelo - Catálogo de Relojes</title>
+  <title>{% if pag_titulo %}{{ pag_titulo }} · {% endif %}Angelo - Catálogo de Relojes</title>
   <meta name="description" content="Catálogo Angelo: relojes originales Casio, G-Shock, Baby-G, Tommy Hilfiger, Tissot y más, con fotos y fichas técnicas. Encarnación, Paraguay.">
   <meta name="theme-color" content="#0a0a0f">
   <meta property="og:title" content="Angelo - Catálogo de Relojes">
@@ -12,139 +12,20 @@
   <meta property="og:url" content="https://catalogo-angelo.onrender.com/client">
   <meta property="og:image" content="https://catalogo-angelo.onrender.com/static/logo.PNG">
   <link rel="icon" type="image/png" href="/static/favicon_A.png">
-  <style>
-    :root{
-      --bg:#0a0a0f; --surface:#12121a; --card:#1a1a24;
-      --border:#2a2a3a; --ink:#e8e8f0; --muted:#8a8aa0;
-      /* Amarillo/oro principal — igual que el logo de Angelo */
-      --acc:#F2C544; --acc-dim:#C9A233; --gold:#D4A857;
-    }
-    /* Fondos conmutables: negro (default) · gris · azul oscuro · verde oscuro */
-    :root[data-tema="gris"]{ --bg:#1e1e24; --surface:#282830; --card:#33333c; --border:#4b4b56; }
-    :root[data-tema="azul"]{ --bg:#0a1020; --surface:#101a30; --card:#16223d; --border:#243352; }
-    :root[data-tema="verde"]{ --bg:#0a1512; --surface:#10201a; --card:#152a21; --border:#23392f; }
-    /* Selector de tema (esquina inferior derecha) */
-    .temas{position:fixed;right:14px;bottom:14px;display:flex;gap:8px;background:var(--surface);border:1px solid var(--border);padding:8px 10px;border-radius:999px;z-index:60;box-shadow:0 6px 18px rgba(0,0,0,.45)}
-    .temas button{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.32);cursor:pointer;padding:0;transition:border-color .2s}
-    .temas button:hover{border-color:var(--muted)}
-    .temas button.sel{border-color:var(--acc);box-shadow:0 0 6px rgba(242,197,68,.6)}
-    /* Buscador + filtro de marcas (barra pegajosa arriba) */
-    .filtros{position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--border);padding:.7rem 1.2rem}
-    .filtros .inner{max-width:1200px;margin:auto;display:flex;flex-direction:column;gap:.6rem}
-    #buscador{width:100%;padding:.65rem 1rem;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--ink);font:inherit;outline:none}
-    #buscador:focus{border-color:var(--acc)}
-    .pills-row{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
-    .pills{display:flex;flex-wrap:wrap;gap:.45rem}
-    .pill{border:1px solid var(--border);background:transparent;color:var(--acc);border-radius:999px;padding:.3rem .8rem;font-size:.8rem;cursor:pointer;transition:all .2s}
-    .pill:hover{border-color:var(--acc);color:#FFE08A}
-    .pill.sel{background:var(--acc);color:#111;font-weight:700}
-    .contador{font-size:.78rem;color:var(--muted);white-space:nowrap}
-    *{box-sizing:border-box;margin:0;padding:0}
-    html{font-size:16px;scroll-behavior:smooth}
-    body{
-      font:400 1rem/1.6 'Segoe UI',system-ui,sans-serif;
-      background:var(--bg);color:var(--ink);min-height:100vh
-    }
-    /* Header */
-    header{
-      padding:1rem 2rem;background:var(--surface);border-bottom:1px solid var(--border)}
-    .header{
-      max-width:1200px;margin:auto;display:flex;justify-content:space-between;align-items:center}
-    .logo{
-      display:flex;align-items:center;gap:.5rem;color:var(--acc);font-weight:700;letter-spacing:.5px}
-    .logo svg{
-      width:32;height:32;fill:var(--acc)}
-    .nav a{
-      color:var(--acc);text-decoration:none;margin-left:1rem;font-size:.9rem}
-    .nav a:hover{color:#FFE08A}
-    /* Main */
-    main{
-      max-width:1200px;padding:2rem;margin:auto;scroll-margin-top:120px}
-    .section{
-      margin-bottom:2rem}
-    .brand-header{
-      color:var(--acc);font-size:1.8rem;margin-bottom:1.5rem;border-bottom:1px solid var(--border);
-      padding-bottom:.5rem}
-    /* Grid */
-    .grid{
-      display:grid;gap:1.5rem}
-    @media(min-width:768px){.grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}}
-    @media(min-width:1200px){.grid{grid-template-columns:repeat(4,1fr)}}
-    /* Teléfono: las marcas en UNA fila deslizable (antes enrolladas tapaban media pantalla) */
-    @media(max-width:768px){
-      .pills-row{flex-wrap:nowrap}
-      .pills{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}
-      .contador{display:none}
-      .filtros{padding:.6rem .9rem}
-    }
-    /* Card */
-    .card{
-      background:var(--card);border-radius:12px;padding:1.5rem;text-decoration:none;color:var(--ink);
-      transition:transform .2s,box-shadow .2s;cursor:pointer;position:relative}
-    .card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
-    /* Aviso de fotos extras: invita a tocar el modelo */
-    .foto-badge{
-      position:absolute;top:.7rem;right:.7rem;background:rgba(0,0,0,.72);color:var(--acc);
-      border:1px solid var(--acc-dim);border-radius:999px;font-size:.7rem;padding:.15rem .5rem;
-      display:flex;align-items:center;gap:.25rem;z-index:2}
-    /* ===== Visor de fotos (galería al tocar el modelo) ===== */
-    .visor{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;
-      justify-content:center;padding:1rem;z-index:200}
-    .visor.on{display:flex}
-    .visor-caja{background:var(--surface);border:1px solid var(--border);border-radius:14px;
-      width:100%;max-width:920px;max-height:94vh;overflow:auto;position:relative}
-    .visor-cerrar{position:absolute;top:.6rem;right:.6rem;width:38px;height:38px;border-radius:50%;
-      border:1px solid var(--border);background:var(--card);color:var(--ink);font-size:1.4rem;
-      line-height:1;cursor:pointer;z-index:3}
-    .visor-cerrar:hover{border-color:var(--acc);color:var(--acc)}
-    .visor-foto{position:relative;background:#0d0d12;min-height:240px;display:flex;align-items:center;
-      justify-content:center;padding:1.4rem 2.8rem .6rem}
-    .visor-foto img{max-width:100%;max-height:56vh;object-fit:contain}  /* SIEMPRE completa, sin recorte */
-    .visor-flecha{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;
-      border-radius:50%;border:1px solid var(--border);background:rgba(26,26,36,.9);color:var(--acc);
-      font-size:1.5rem;line-height:1;cursor:pointer;z-index:2}
-    .visor-flecha:hover{background:var(--acc);color:#111}
-    .visor-flecha.izq{left:.5rem}.visor-flecha.der{right:.5rem}
-    .visor-cont{position:absolute;bottom:.5rem;left:50%;transform:translateX(-50%);
-      background:rgba(0,0,0,.6);color:var(--ink);font-size:.75rem;padding:.1rem .6rem;border-radius:999px}
-    .visor-mini{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;padding:.6rem 1rem 0}
-    .visor-mini img{width:52px;height:52px;object-fit:contain;background:#111;border:2px solid transparent;
-      border-radius:8px;cursor:pointer;opacity:.65}
-    .visor-mini img.sel{border-color:var(--acc);opacity:1}
-    .visor-info{padding:1rem 1.2rem 1.3rem}
-    .visor-marca{color:var(--acc);font-size:.8rem;text-transform:uppercase;letter-spacing:.6px}
-    .visor-ref{font-size:1.3rem;font-weight:700;margin-top:.15rem}
-    .visor-nombre{color:var(--muted);font-size:.95rem}
-    .visor-specs{margin-top:.9rem;display:grid;grid-template-columns:1fr;gap:.35rem}
-    @media(min-width:640px){.visor-specs{grid-template-columns:1fr 1fr}}
-    .visor-specs div{background:var(--card);border:1px solid var(--border);border-radius:8px;
-      padding:.45rem .6rem;font-size:.82rem;line-height:1.35}
-    .visor-specs b{color:var(--acc);display:block;font-size:.72rem;text-transform:uppercase;
-      letter-spacing:.4px;font-weight:600}
-    .visor-estado{padding:2rem;text-align:center;color:var(--muted)}
-    .card-img{
-      width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;margin-bottom:1rem}
-    .card-img img{
-      width:100%;height:100%;object-fit:contain;background:#111}
-    .card-body .ref{
-      color:var(--muted);font-size:.85rem;margin-bottom:.3rem;display:block}
-    .card-body .name{
-      font-size:1.1rem;margin-bottom:.5rem;display:block;min-height:2.2rem}
-    .card-body .brand{
-      color:var(--acc);font-size:.8rem;text-transform:uppercase;margin-bottom:.3rem;display:block}
-    /* No results */
-    .empty{
-      text-align:center;padding:3rem;color:var(--muted)}
-    /* Footer */
-    footer{
-      padding:2rem;text-align:center;color:var(--muted);font-size:.85rem;border-top:1px solid var(--border)}
-  </style>
-  <script>
-    /* Aplica el fondo elegido antes de pintar la página (sin parpadeo) */
-    (function(){var t=localStorage.getItem('angelo-tema')||'negro';document.documentElement.setAttribute('data-tema',t);})();
-  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Hojas de estilo: base.css = común · catalogo.css = esta página -->
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/catalogo.css">
+  <!-- Tema elegido, aplicado antes de pintar (sin parpadeo) -->
+  <script src="/assets/js/tema.js"></script>
 </head>
-<body>
+<!-- data-pag: total | marca | tipo  ·  data-marca/data-tipo: filtro precargado
+     por el servidor  ·  data-estatico: 1 = página normal (fichas en .json) -->
+<body data-pag="{{ pag }}" data-marca="{{ marca_actual }}" data-tipo="{{ tipo_actual }}"
+      data-estatico="{{ '1' if estatico else '0' }}" data-wa="{{ whatsapp }}"
+      data-ruta-catalogo="{{ ruta_catalogo }}">
 
 <header id="top">
   <div class="header">
@@ -153,8 +34,13 @@
       Angelo
     </div>
     <nav class="nav">
-      <a href="#top">Inicio</a>
+      <a href="{{ ruta_portada }}">Inicio</a>
+      {% if pag == 'total' %}
+      <a href="#colecciones" class="nav-col">Colecciones</a>
+      {% endif %}
       <a href="#catalogo">Catálogo</a>
+      <button type="button" id="favNav" class="nav-fav" title="Ver solo tus favoritos">❤ <span id="favN">0</span></button>
+      <button type="button" id="cartNav" class="nav-fav" title="Ver tu carrito de interés">🛒 <span id="cartN">0</span></button>
     </nav>
   </div>
 </header>
@@ -162,13 +48,22 @@
 <!-- Buscador + filtro por marca: filtra al instante en el navegador -->
 <div class="filtros">
   <div class="inner">
-    <input id="buscador" type="search" placeholder="🔍 Buscar por referencia, nombre o marca…" autocomplete="off">
+    <nav class="miga" aria-label="Migas de pan">
+      <a href="{{ ruta_portada }}">Inicio</a><span>›</span>
+      <a href="{{ ruta_catalogo }}">Catálogo</a>
+      <span id="migaSepT" hidden>›</span><b id="migaTipo"></b>
+      <span id="migaSep" hidden>›</span><b id="migaMarca"></b>
+    </nav>
+    <form id="formBusca" action="{{ ruta_catalogo }}" method="get">
+      <input id="buscador" name="q" type="search" placeholder="🔍 Buscar por referencia, nombre o marca…" autocomplete="off">
+    </form>
     <div class="pills-row">
       <div class="pills">
-        <button type="button" class="pill sel" data-marca="">Todas</button>
+        <a class="pill sel" data-marca="" href="{{ ruta_catalogo }}">Todas</a>
         {% for m in marcas %}
-        <button type="button" class="pill" data-marca="{{ m }}">{{ m }}</button>
+        <a class="pill" data-marca="{{ m }}" href="{{ link_marca[m] }}">{{ m }}</a>
         {% endfor %}
+        <button type="button" id="tipoChip" class="tipo-chip" hidden title="Quitar filtro de tipo"></button>
       </div>
       <div id="contador" class="contador"></div>
     </div>
@@ -176,23 +71,41 @@
 </div>
 
 <main id="catalogo">
-  <div id="vacio" class="empty" style="display:none">Sin resultados — probá con otra referencia o marca.</div>
+  {% if pag == 'total' %}
+  <!-- Colecciones destacadas (tiles tipo Casio): las 8 marcas con más modelos -->
+  <section id="colecciones" class="colec">
+    <h2 class="colec-h">Colecciones</h2>
+    <div class="colec-grid">
+      {% for marca, items in destacadas %}
+      <a class="colec-tile" data-tile="{{ marca }}" href="{{ link_marca[marca] }}" title="Ver {{ marca }}">
+        {% if items[0].images %}
+        <img loading="lazy" decoding="async" src="{{ url_for('img', p=items[0].images[0]) }}" alt="{{ marca }}">
+        {% endif %}
+        <span><b>{{ marca }}</b><i>{{ items|length }} modelos</i></span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <div id="vacio" class="empty" hidden>Sin resultados — probá con otra referencia o marca.</div>
+
   {% for marca, items in grupos.items() %}
   <section class="brand">
-    <h2 class="brand-header">{{ marca }}</h2>
+    <h2 class="brand-header">{{ marca }} <span>{{ items|length }}</span></h2>
     <div class="grid">
       {% for p in items %}
-      <!-- Tarjeta SIN enlace a tiendas externas (pedido 29/09/2026):
-           el clic se queda en la página; abre la galería del modelo. -->
-      <div class="card" data-id="{{ p.id }}" data-brand="{{ marca }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ marca)|lower }}">
+      <!-- Tarjeta SIN enlace a tiendas externas: el clic se queda en la página
+           y abre la galería del modelo. -->
+      <div class="card" data-id="{{ p.id }}" data-brand="{{ marca }}" data-linea="{{ p.line or '' }}" data-genero="{{ p.gender or '' }}" data-busqueda="{{ (p.name ~ ' ' ~ p.reference ~ ' ' ~ marca)|lower }}">
         {% if p.images|length > 1 %}
         <span class="foto-badge">📷 {{ p.images|length }}</span>
         {% endif %}
         <div class="card-img">
           {% if p.images %}
-            <img loading="lazy" decoding="async" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}" onerror="this.style.display='none'">
+          <img loading="lazy" decoding="async" src="{{ url_for('img', p=p.images[0]) }}" alt="{{ p.reference }}">
           {% else %}
-            <div style="height:100%;background:#222;display:flex;align-items:center;justify-content:center;color:var(--muted)">Sin foto</div>
+          <div class="sin-foto">Sin foto</div>
           {% endif %}
         </div>
         <div class="card-body">
@@ -217,10 +130,10 @@
     <button class="visor-cerrar" id="visorCerrar" aria-label="Cerrar">✕</button>
     <div class="visor-foto">
       <button class="visor-flecha izq" id="visorPrev" aria-label="Foto anterior">‹</button>
-      <img id="visorImg" alt="" style="display:none">
+      <img id="visorImg" alt="" hidden>
       <div class="visor-estado" id="visorEstado">Cargando…</div>
       <button class="visor-flecha der" id="visorNext" aria-label="Foto siguiente">›</button>
-      <span class="visor-cont" id="visorCont" style="display:none"></span>
+      <span class="visor-cont" id="visorCont" hidden></span>
     </div>
     <div class="visor-mini" id="visorMini"></div>
     <div class="visor-info">
@@ -228,169 +141,34 @@
       <div class="visor-ref" id="visorRef"></div>
       <div class="visor-nombre" id="visorNombre"></div>
       <div class="visor-specs" id="visorSpecs"></div>
+      <button type="button" id="visorCart" class="btn-vcar" hidden>+ Agregar al carrito de interés</button>
     </div>
   </div>
 </div>
 
-<!-- Selector de fondo: negro · gris · azul oscuro · verde oscuro -->
+<!-- ===== Carrito de interés: lista de modelos para cotizar / pedir por WhatsApp ===== -->
+<div class="sombra" id="carSombra"></div>
+<aside class="carrito" id="carrito" aria-hidden="true" aria-label="Carrito de interés">
+  <div class="carrito-h"><b>🛒 MI INTERÉS</b><button type="button" id="carCerrar" aria-label="Cerrar carrito">✕</button></div>
+  <div class="carrito-l" id="carLista"></div>
+  <div class="carrito-f">
+    <button type="button" class="btn-wa" id="carWa" hidden>Enviar pedido por WhatsApp</button>
+    <button type="button" class="btn-copiar" id="carCopiar">Copiar lista</button>
+    <button type="button" class="btn-vaciar" id="carVaciar">Vaciar carrito</button>
+  </div>
+</aside>
+
+<!-- Selector de fondo: claro (blanco, estilo Casio) · negro · gris · azul · verde -->
 <div class="temas" title="Cambiar color de fondo">
-  <button data-tema="negro" style="background:#141414" title="Negro" aria-label="Fondo negro"></button>
-  <button data-tema="gris" style="background:#8b8b95" title="Gris" aria-label="Fondo gris"></button>
-  <button data-tema="azul" style="background:#3f6fe0" title="Azul oscuro" aria-label="Fondo azul oscuro"></button>
-  <button data-tema="verde" style="background:#2fa46f" title="Verde oscuro" aria-label="Fondo verde oscuro"></button>
+  <button data-tema="claro" title="Claro (blanco, estilo Casio)" aria-label="Fondo claro"></button>
+  <button data-tema="negro" title="Negro" aria-label="Fondo negro"></button>
+  <button data-tema="gris" title="Gris" aria-label="Fondo gris"></button>
+  <button data-tema="azul" title="Azul oscuro" aria-label="Fondo azul oscuro"></button>
+  <button data-tema="verde" title="Verde oscuro" aria-label="Fondo verde oscuro"></button>
 </div>
-<script>
-  (function(){
-    var K='angelo-tema';
-    var actual=document.documentElement.getAttribute('data-tema')||'negro';
-    var botones=document.querySelectorAll('.temas button');
-    function marcar(){botones.forEach(function(b){b.classList.toggle('sel',b.dataset.tema===actual)})}
-    marcar();
-    botones.forEach(function(b){b.onclick=function(){actual=b.dataset.tema;document.documentElement.setAttribute('data-tema',actual);localStorage.setItem(K,actual);marcar();}});
-  })();
-</script>
-<script>
-  /* Buscador + filtro por marca: todo en el navegador, al instante */
-  (function(){
-    var cards=[].slice.call(document.querySelectorAll('.card'));
-    var secciones=[].slice.call(document.querySelectorAll('section.brand'));
-    var buscador=document.getElementById('buscador');
-    var contador=document.getElementById('contador');
-    var vacio=document.getElementById('vacio');
-    var pills=[].slice.call(document.querySelectorAll('.pill'));
-    var marca='';
-    function aplicar(){
-      var q=(buscador.value||'').toLowerCase().trim();
-      var vis=0;
-      cards.forEach(function(c){
-        var ok=(!marca||c.dataset.brand===marca)&&(!q||c.dataset.busqueda.indexOf(q)>=0);
-        c.style.display=ok?'':'none';
-        if(ok)vis++;
-      });
-      secciones.forEach(function(s){
-        var hay=[].some.call(s.querySelectorAll('.card'),function(c){return c.style.display!=='none'});
-        s.style.display=hay?'':'none';
-      });
-      contador.textContent=vis+' '+(vis===1?'producto':'productos');
-      vacio.style.display=vis?'none':'';
-    }
-    pills.forEach(function(b){b.onclick=function(){
-      marca=b.dataset.marca;
-      pills.forEach(function(x){x.classList.toggle('sel',x===b)});
-      aplicar();
-    }});
-    /* 120 ms de espera: en el celular cada tecla repintaba 3.000+ tarjetas */
-    var t=null;
-    buscador.addEventListener('input',function(){clearTimeout(t);t=setTimeout(aplicar,120)});
-    aplicar();
-  })();
-</script>
 
-<script>
-/* ===== Galería: tocar un modelo abre todas sus fotos + especificaciones ===== */
-(function(){
-  var visor=document.getElementById('visor');
-  var vImg=document.getElementById('visorImg');
-  var vEst=document.getElementById('visorEstado');
-  var vCont=document.getElementById('visorCont');
-  var vMini=document.getElementById('visorMini');
-  var vMarca=document.getElementById('visorMarca');
-  var vRef=document.getElementById('visorRef');
-  var vNom=document.getElementById('visorNombre');
-  var vSpecs=document.getElementById('visorSpecs');
-  var fotos=[], i=0, cargando=null;
-
-  function pintar(){
-    if(!fotos.length){vImg.style.display='none';vCont.style.display='none';return;}
-    vImg.src=fotos[i];
-    vImg.style.display='';
-    vEst.style.display='none';
-    vCont.style.display='';
-    vCont.textContent=(i+1)+' / '+fotos.length;
-    [].forEach.call(vMini.children,function(t,k){t.classList.toggle('sel',k===i)});
-  }
-  function mover(d){
-    if(!fotos.length)return;
-    i=(i+d+fotos.length)%fotos.length;
-    pintar();
-  }
-  function abrir(id){
-    visor.classList.add('on');
-    visor.setAttribute('aria-hidden','false');
-    document.body.style.overflow='hidden';
-    fotos=[];i=0;
-    vImg.style.display='none';vCont.style.display='none';vMini.innerHTML='';
-    vEst.style.display='';vEst.textContent='Cargando…';
-    vMarca.textContent='';vRef.textContent='';vNom.textContent='';vSpecs.innerHTML='';
-    if(cargando&&cargando.abort)cargando.abort();
-    cargando=fetch('/api/ficha/'+id)
-      .then(function(r){if(!r.ok)throw 0;return r.json()})
-      .then(function(p){
-        vMarca.textContent=p.marca||'';
-        vRef.textContent=p.reference||'';
-        vNom.textContent=(p.name||'').toUpperCase();
-        fotos=p.images||[];
-        var claves=Object.keys(p.specs||{});
-        if(claves.length){
-          claves.forEach(function(k){
-            var d=document.createElement('div');
-            var b=document.createElement('b');
-            b.textContent=k;
-            d.appendChild(b);
-            d.appendChild(document.createTextNode(p.specs[k]));
-            vSpecs.appendChild(d);
-          });
-        }else{
-          vSpecs.innerHTML='<div style="grid-column:1/-1;color:var(--muted)">Sin datos técnicos disponibles.</div>';
-        }
-        if(!fotos.length){
-          vEst.style.display='';vEst.textContent='Sin fotos disponibles.';
-          return;
-        }
-        fotos.forEach(function(u,k){
-          var t=document.createElement('img');
-          t.loading='lazy';t.src=u;t.alt=(p.reference||'')+' '+(k+1);
-          t.onclick=function(){i=k;pintar()};
-          vMini.appendChild(t);
-        });
-        i=0;pintar();
-      })
-      .catch(function(){
-        vEst.style.display='';
-        vEst.textContent='No se pudo cargar la ficha. Probá de nuevo.';
-      });
-  }
-  function cerrar(){
-    visor.classList.remove('on');
-    visor.setAttribute('aria-hidden','true');
-    document.body.style.overflow='';
-  }
-
-  document.addEventListener('click',function(e){
-    var c=e.target.closest?e.target.closest('.card[data-id]'):null;
-    if(c)abrir(c.dataset.id);
-  });
-  document.getElementById('visorCerrar').onclick=cerrar;
-  document.getElementById('visorPrev').onclick=function(){mover(-1)};
-  document.getElementById('visorNext').onclick=function(){mover(1)};
-  visor.addEventListener('click',function(e){if(e.target===visor)cerrar()});
-  document.addEventListener('keydown',function(e){
-    if(!visor.classList.contains('on'))return;
-    if(e.key==='Escape')cerrar();
-    if(e.key==='ArrowLeft')mover(-1);
-    if(e.key==='ArrowRight')mover(1);
-  });
-  /* Swipe en celular */
-  var x0=null;
-  visor.addEventListener('touchstart',function(e){x0=e.touches[0].clientX},{passive:true});
-  visor.addEventListener('touchend',function(e){
-    if(x0===null)return;
-    var dx=e.changedTouches[0].clientX-x0;
-    if(Math.abs(dx)>45)mover(dx<0?1:-1);
-    x0=null;
-  },{passive:true});
-})();
-</script>
-
+<!-- Comportamiento: carrito compartido + filtros/galería de esta página -->
+<script src="/assets/js/comun.js"></script>
+<script src="/assets/js/catalogo.js"></script>
 </body>
 </html>

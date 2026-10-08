@@ -47,7 +47,8 @@ check("/client público -> 200", r.status_code == 200)
 check("/client no muestra el panel admin", b"Panel Admin" not in r.data)
 check("/client pide las fotos por /img/ (ruta que existe)", b'src="/img/' in r.data)
 check("/client incluye selector de fondo (data-tema)", b'data-tema' in r.data)
-check("/client usa el amarillo principal", b'#F2C544' in r.data)
+check("/client usa el amarillo principal (base.css)",
+      b'#F2C544' in C.get("/assets/css/base.css").data)
 check("/client orden estable por marca y modelo (2 visitas idénticas)",
       C.get("/client").data == C.get("/client").data)
 r = C.get("/client")
@@ -60,8 +61,8 @@ check("/client agrupa por marca real, nunca por tienda de origen",
 secciones = re.findall(rb'brand-header">([^<]+)<', r.data)
 check("/client secciones de marca en orden alfabético",
       len(secciones) >= 20 and secciones == sorted(secciones))
-check("/client menu con anclas reales (Inicio/Catálogo)",
-      b'href="#top"' in r.data and b'href="#catalogo"' in r.data)
+check("/client menu enlaza la portada y anclas reales (Inicio/Catálogo)",
+      b'href="/portada"' in r.data and b'href="#catalogo"' in r.data)
 r = C.get("/catalogo")
 check("/catalogo público -> 200", r.status_code == 200)
 check("/catalogo usa el amarillo principal", b'#F2C544' in r.data)
@@ -188,6 +189,120 @@ check("contraseña incorrecta rechazada", b"incorrect" in r.data.lower())
 print("— respaldo automático (inerte sin token) —")
 check("respaldo.restaurar() no rompe sin token", respaldo.restaurar() is None)
 check("respaldo.respaldar() no rompe sin token", respaldo.respaldar() is None)
+
+print("— portada en blanco (buscador + 6 menús con ejemplos + marcas) —")
+_js_catalogo = C.get("/assets/js/catalogo.js").data.decode("utf-8")
+r = C.get("/portada")
+s_port = r.data.decode("utf-8")
+check("/portada -> 200", r.status_code == 200)
+check("/portada NO trae productos (ni fotos ni nombres)",
+      'class="card"' not in s_port and 'data-id="' not in s_port)
+check("/portada tiene los 6 tipos de producto", s_port.count('class="tipo-tile"') == 6)
+check("/portada muestra 3 ejemplos por menú (guía de 18)",
+      s_port.count('class="ej"') == 18)
+n_marcas_port = len(re.findall(r'class="pill" data-marca="', s_port))
+n_marcas_client = html_client.count('class="pill" data-marca="')
+check("/portada lista TODAS las marcas del catálogo",
+      n_marcas_port == n_marcas_client and n_marcas_port >= 20)
+check("/portada es liviana (< 60 KB)", len(r.data) < 60 * 1024)
+check("/client recibe los filtros de la portada (?q/?marca/?tipo)",
+      "URLSearchParams(location.search)" in _js_catalogo)
+check("/client enlaza de vuelta a la portada",
+      'href="/portada"' in html_client)
+
+print("— código separado: HTML sin CSS ni JS pegados —")
+check("/portada sin <style> ni <script> pegados",
+      "<style" not in s_port and "<script>" not in s_port)
+check("/client sin <style> ni <script> pegados",
+      "<style" not in html_client and "<script>" not in html_client)
+check("/portada carga base.css + portada.css",
+      '/assets/css/base.css' in s_port and '/assets/css/portada.css' in s_port)
+check("/client carga base.css + catalogo.css",
+      '/assets/css/base.css' in html_client and '/assets/css/catalogo.css' in html_client)
+check("/assets/css/base.css -> 200 con el amarillo principal",
+      b'#F2C544' in C.get("/assets/css/base.css").data)
+check("/assets/js/tema.js y comun.js -> 200",
+      C.get("/assets/js/tema.js").status_code == 200
+      and C.get("/assets/js/comun.js").status_code == 200)
+check("/assets sólo sirve css y js (nunca Python ni la base)",
+      C.get("/assets/app.py").status_code == 404
+      and C.get("/assets/../app.py").status_code == 404
+      and C.get("/assets/css/../../app.py").status_code == 404)
+check("ninguna página esconde contenido con estilos escritos en el HTML",
+      "style=" not in s_port and 'style="display:none"' not in html_client
+      and "onerror=" not in html_client)
+
+print("— páginas por marca y por tipo (una por pestaña) —")
+r = C.get("/marca/casio")
+s_casio = r.data.decode("utf-8")
+check("/marca/casio -> 200 y trae sólo productos Casio",
+      r.status_code == 200 and s_casio.count('class="card"') > 2000
+      and 'data-brand="Tissot"' not in s_casio)
+check("/marca/casio titula la página con la marca",
+      "<title>Casio" in s_casio)
+check("/marca/q-q (Q&Q, carácter raro) -> 200",
+      C.get("/marca/q-q").status_code == 200)
+check("/marca inexistente -> 404", C.get("/marca/no-existe").status_code == 404)
+_m = re.search(r'href="/tipo/g-shock"[^>]*>.*?<i>([\d.]+) modelos', s_port, re.S)
+_n_gs = int(_m.group(1).replace(".", "")) if _m else -1
+r = C.get("/tipo/g-shock")
+check("/tipo/g-shock -> 200 con los MISMOS modelos que cuenta la portada",
+      r.status_code == 200 and _n_gs > 0
+      and r.data.decode("utf-8").count('class="card"') == _n_gs)
+check("/tipo inexistente -> 404", C.get("/tipo/cualquiera").status_code == 404)
+
+print("— división: página normal (HTML plano, sin Python) —")
+check("/client dinámico se queda en fichas /api/ficha/<id> (sin .json)",
+      'data-estatico="0"' in html_client)
+check("/client incluye el carrito de interés (botón header + cajón)",
+      'id="cartNav"' in html_client and 'id="carrito"' in html_client)
+check("/client botón de WhatsApp oculto hasta que haya número",
+      'id="carWa" hidden' in html_client)
+check("el número de WhatsApp llega por data-wa (sin JS pegado)",
+      'data-wa="' in html_client)
+import tempfile                                     # noqa: E402
+import json as _json                                # noqa: E402
+from pathlib import Path                            # noqa: E402
+import exportar_estatico                            # noqa: E402
+with tempfile.TemporaryDirectory() as td:
+    resumen = exportar_estatico.exportar(destino=td, sin_fotos=True, top=3)
+    _idx = (Path(td) / "index.html").read_text(encoding="utf-8")
+    _col = (Path(td) / "catalogo.html").read_text(encoding="utf-8")
+    check("export: index.html = portada liviana (tipos, sin tarjetas)",
+          'class="tipo-tile"' in _idx and 'class="card"' not in _idx)
+    check("export: catalogo.html en modo estático (fichas en .json)",
+          'data-estatico="1"' in _col and 'class="card"' in _col)
+    check("export: una página por marca y una por tipo",
+          (Path(td) / "marcas" / "casio.html").is_file()
+          and (Path(td) / "marcas" / "q-q.html").is_file()
+          and (Path(td) / "tipos" / "g-shock.html").is_file()
+          and (Path(td) / "tipos" / "lentes.html").is_file()
+          and resumen["paginas_marca"] >= 20 and resumen["paginas_tipo"] == 6)
+    check("export: la página de una marca sólo trae SUS productos",
+          'data-brand="Tissot"' not in
+          (Path(td) / "marcas" / "casio.html").read_text(encoding="utf-8"))
+    check("export: css y js copiados aparte (assets/)",
+          (Path(td) / "assets" / "css" / "base.css").is_file()
+          and (Path(td) / "assets" / "css" / "portada.css").is_file()
+          and (Path(td) / "assets" / "css" / "catalogo.css").is_file()
+          and (Path(td) / "assets" / "js" / "tema.js").is_file()
+          and (Path(td) / "assets" / "js" / "comun.js").is_file()
+          and (Path(td) / "assets" / "js" / "catalogo.js").is_file())
+    check("export: las páginas apuntan a /assets/... y a /marcas/...",
+          '/assets/css/base.css' in _col and '/marcas/casio.html' in _idx)
+    _fichas = sorted((Path(td) / "api" / "ficha").glob("*.json"))
+    _datos = [_json.loads(f.read_text(encoding="utf-8")) for f in _fichas]
+    check("export: 3 fichas JSON con fotos por /img/ local",
+          len(_datos) == 3
+          and all(d["images"] and d["images"][0].startswith("/img/") for d in _datos))
+    check("export: las fichas NUNCA llevan precio ni url de origen",
+          all(("sell_price" not in d and "price" not in d and "url" not in d)
+              for d in _datos))
+    check("export: robots.txt permite indexar el catálogo",
+          (Path(td) / "robots.txt").read_text(encoding="utf-8").startswith("User-agent"))
+    check("export: favicon y logo copiados (carpeta static)",
+          (Path(td) / "static" / "favicon_A.png").is_file()
+          and (Path(td) / "static" / "logo.PNG").is_file())
 
 print(f"\nRESULTADO: {ok} OK / {fail} FAIL")
 sys.exit(1 if fail else 0)

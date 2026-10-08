@@ -1,0 +1,105 @@
+/* =========================================================
+   CATALOGO ANGELO · base.css
+   Estilos compartidos por TODAS las páginas públicas
+   (portada y catálogo): variables, temas, encabezado,
+   pie y carrito de interés.
+   Lo propio de cada página va en portada.css / catalogo.css
+   ========================================================= */
+
+/* --- Paleta base (oscuro por defecto) --- */
+:root{
+  --bg:#0a0a0f; --surface:#12121a; --card:#1a1a24;
+  --border:#2a2a3a; --ink:#e8e8f0; --muted:#8a8aa0;
+  /* Amarillo/oro principal — igual que el logo de Angelo */
+  --acc:#F2C544; --acc-dim:#C9A233; --gold:#D4A857;
+}
+/* Fondos conmutables: gris · azul · verde */
+:root[data-tema="gris"]{ --bg:#1e1e24; --surface:#282830; --card:#33333c; --border:#4b4b56; }
+:root[data-tema="azul"]{ --bg:#0a1020; --surface:#101a30; --card:#16223d; --border:#243352; }
+:root[data-tema="verde"]{ --bg:#0a1512; --surface:#10201a; --card:#152a21; --border:#23392f; }
+/* Tema CLARO estilo Casio: fondo blanco, tinta oscura. El oro se oscurece
+   un poco (#9a7714) para que el texto siga leyéndose sobre blanco. */
+:root[data-tema="claro"]{ --bg:#f5f5f8; --surface:#ffffff; --card:#ffffff; --border:#e3e3ea;
+  --ink:#17171d; --muted:#67677a; --acc:#9a7714; --acc-dim:#c9a233; --gold:#8a6d12; }
+
+/* --- Base --- */
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;scroll-behavior:smooth}
+body{font:400 1rem/1.6 'Montserrat','Segoe UI',system-ui,sans-serif;
+  background:var(--bg);color:var(--ink);min-height:100vh}
+/* El atributo hidden de HTML manda siempre (los estados los pone JavaScript
+   con .hidden, nunca con estilos escritos dentro del HTML) */
+[hidden]{display:none !important}
+
+/* --- Encabezado --- */
+header{padding:1rem 2rem;background:var(--surface);border-bottom:1px solid var(--border)}
+.header{max-width:1200px;margin:auto;display:flex;justify-content:space-between;align-items:center}
+.logo{display:flex;align-items:center;gap:.5rem;color:var(--acc);font-weight:700;letter-spacing:.5px}
+.logo svg{width:32;height:32;fill:var(--acc)}
+.nav a{color:var(--acc);text-decoration:none;margin-left:1rem;font-size:.9rem}
+.nav a:hover{color:#FFE08A}
+.nav-fav{background:none;border:none;font:inherit;font-size:.9rem;color:var(--acc);cursor:pointer;
+  padding:0;margin-left:1rem}
+.nav-fav:hover{color:#FFE08A}
+
+/* --- Pie --- */
+footer{padding:2rem;text-align:center;color:var(--muted);font-size:.85rem;
+  border-top:1px solid var(--border)}
+
+/* --- Selector de fondo (esquina inferior derecha) --- */
+.temas{position:fixed;right:14px;bottom:14px;display:flex;gap:8px;background:var(--surface);
+  border:1px solid var(--border);padding:8px 10px;border-radius:999px;z-index:60;
+  box-shadow:0 6px 18px rgba(0,0,0,.45)}
+.temas button{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.32);
+  cursor:pointer;padding:0;transition:border-color .2s}
+.temas button:hover{border-color:var(--muted)}
+.temas button.sel{border-color:var(--acc);box-shadow:0 0 6px rgba(242,197,68,.6)}
+:root[data-tema="claro"] .temas button{border-color:rgba(0,0,0,.3)}
+/* Color de cada punto del selector (antes eran estilos escritos en el HTML) */
+.temas button[data-tema="claro"]{background:#ffffff}
+.temas button[data-tema="negro"]{background:#141414}
+.temas button[data-tema="gris"]{background:#8b8b95}
+.temas button[data-tema="azul"]{background:#3f6fe0}
+.temas button[data-tema="verde"]{background:#2fa46f}
+
+/* --- Carrito de interés (cajón lateral) --- */
+.sombra{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:290;display:none}
+.sombra.on{display:block}
+.carrito{position:fixed;top:0;right:0;height:100%;width:min(400px,93vw);
+  background:var(--surface);border-left:1px solid var(--border);z-index:300;
+  transform:translateX(105%);transition:transform .25s ease;display:flex;
+  flex-direction:column;box-shadow:-10px 0 34px rgba(0,0,0,.5)}
+.carrito.on{transform:none}
+.carrito-h{display:flex;justify-content:space-between;align-items:center;
+  padding:1rem 1.1rem;border-bottom:1px solid var(--border)}
+.carrito-h b{color:var(--acc);letter-spacing:.5px;font-size:.92rem}
+.carrito-h button{background:none;border:1px solid var(--border);color:var(--ink);
+  width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1rem}
+.carrito-h button:hover{border-color:var(--acc);color:var(--acc)}
+.carrito-l{flex:1;overflow:auto;padding:.4rem 1.1rem}
+.ci{display:flex;justify-content:space-between;align-items:center;gap:.7rem;
+  padding:.6rem 0;border-bottom:1px dashed var(--border);font-size:.85rem}
+.ci b{display:block;font-size:.88rem}
+.ci small{color:var(--muted);display:block;font-size:.75rem}
+.ci .quitar{background:none;border:1px solid var(--border);color:var(--muted);
+  border-radius:8px;padding:.25rem .5rem;cursor:pointer;flex:none;font-size:.72rem}
+.ci .quitar:hover{border-color:#e2555f;color:#e2555f}
+.carrito-f{padding:1rem 1.1rem;border-top:1px solid var(--border);
+  display:flex;flex-direction:column;gap:.6rem}
+.btn-wa{background:#1FA855;color:#fff;border:none;border-radius:10px;padding:.75rem;
+  font:700 .92rem 'Montserrat',sans-serif;cursor:pointer;transition:filter .15s}
+.btn-wa:hover{filter:brightness(1.1)}
+.btn-copiar{background:transparent;border:1px solid var(--border);color:var(--ink);
+  border-radius:10px;padding:.65rem;font:600 .85rem 'Montserrat',sans-serif;cursor:pointer}
+.btn-copiar:hover{border-color:var(--acc);color:var(--acc)}
+.btn-vaciar{background:none;border:none;color:var(--muted);font-size:.75rem;
+  cursor:pointer;text-decoration:underline}
+.btn-vaciar:hover{color:#e2555f}
+.carrito-vacio{color:var(--muted);text-align:center;padding:2.6rem .8rem;
+  font-size:.9rem;line-height:1.7}
+.carrito-n{font-size:.78rem;color:var(--muted);text-align:center;padding:.7rem 0 1rem}
+
+/* --- Ajustes de la barra en pantallas chicas --- */
+@media(max-width:640px){
+  .nav a.nav-col{display:none}
+}
