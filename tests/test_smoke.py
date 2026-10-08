@@ -174,6 +174,10 @@ check("/backup.db con sesión -> SQLite íntegro (rescate)",
       r.status_code == 200 and r.data[:16] == b"SQLite format 3\x00")
 check("API PUT con sesión pasa la auth (404 = id inexistente)",
       C.put("/api/producto/99999999", json={"name": "x"}).status_code == 404)
+check("API PUT admite corregir la referencia (404 = id inexistente)",
+      C.put("/api/producto/99999999", json={"reference": "T"}).status_code == 404)
+check("API PUT rechaza referencia vacía -> 400",
+      C.put("/api/producto/99999999", json={"reference": "   "}).status_code == 400)
 C.get("/logout")
 
 print("— login socio (revendedor) —")

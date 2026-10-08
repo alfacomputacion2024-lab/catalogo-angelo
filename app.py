@@ -818,11 +818,25 @@ def api_ficha(pid):
 @api_login_requerido
 def api_update_producto(pid):
     data = request.get_json(force=True)
-    allowed = {"name", "line", "gender", "description", "sell_price"}
+    allowed = {"name", "line", "gender", "description", "sell_price", "reference"}
     updates = {k: v for k, v in data.items() if k in allowed}
     if not updates:
         return jsonify({"error": "Sin campos válidos para actualizar"}), 400
+    if "reference" in updates:
+        # La referencia es parte de la clave única: se limpia y no se permite vacía.
+        ref = " ".join(str(updates["reference"] or "").split())
+        if not ref:
+            return jsonify({"error": "La referencia no puede quedar vacía"}), 400
+        updates["reference"] = ref
     with db.get_conn() as conn:
+        if "reference" in updates:
+            choque = conn.execute(
+                "SELECT 1 FROM products WHERE reference=? AND id<>? "
+                "AND brand=(SELECT brand FROM products WHERE id=?)",
+                (updates["reference"], pid, pid),
+            ).fetchone()
+            if choque:
+                return jsonify({"error": "Ya existe otro producto con esa referencia"}), 409
         sets = ", ".join(f"{k}=?" for k in updates)
         vals = list(updates.values()) + [pid]
         cur = conn.execute(f"UPDATE products SET {sets} WHERE id=?", vals)
