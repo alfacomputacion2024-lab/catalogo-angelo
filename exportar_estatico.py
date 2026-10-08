@@ -131,6 +131,12 @@ def exportar(destino=None, sin_fotos=False, top=0):
     # 5) robots.txt mínimo (los buscadores pueden indexar todo el catálogo)
     (dest / "robots.txt").write_text("User-agent: *\nAllow: /\n", encoding="utf-8")
 
+    # 6) favicon.ico en la raíz: el navegador lo pide solo (pestaña nueva,
+    #    historial). Es el mismo PNG del logo: se sirve sin dar 404.
+    fav = dest / "static" / "favicon_A.png"
+    if fav.is_file():
+        shutil.copy2(fav, dest / "favicon.ico")
+
     return {
         "destino": str(dest),
         "productos": len(prods),

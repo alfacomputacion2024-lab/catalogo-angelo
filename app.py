@@ -739,6 +739,21 @@ def assets(archivo):
     return resp
 
 
+@app.route("/robots.txt")
+def robots_txt():
+    """Indica a los buscadores que todo el catálogo es indexable (antes devolvía
+    404). El /backup.db queda fuera: es para respaldo, no para la web."""
+    return Response("User-agent: *\nAllow: /\nDisallow: /backup.db\n",
+                    content_type="text/plain; charset=utf-8")
+
+
+@app.route("/favicon.ico")
+def favicon_ico():
+    """El navegador pide /favicon.ico directo (pestaña nueva, historial):
+    lo mandamos al favicon real en vez de responder 404."""
+    return redirect("/static/favicon_A.png", code=302)
+
+
 # =============================================================================
 # Agregar producto manualmente
 # =============================================================================

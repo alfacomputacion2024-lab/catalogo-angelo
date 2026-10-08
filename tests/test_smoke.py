@@ -100,6 +100,17 @@ r = C.get("/static/favicon_A.png")
 check("favicon ligero /static/favicon_A.png -> 200 (< 50 KB)",
       r.status_code == 200 and len(r.data) < 50 * 1024)
 
+print("— robots.txt y favicon.ico (lo que piden los buscadores) —")
+r = C.get("/robots.txt")
+check("/robots.txt -> 200 y permite indexar el catálogo",
+      r.status_code == 200 and (r.mimetype or "").startswith("text/plain")
+      and b"User-agent" in r.data and b"Allow: /" in r.data)
+check("/robots.txt deja fuera el respaldo de la base",
+      b"Disallow: /backup.db" in r.data)
+r = C.get("/favicon.ico")
+check("/favicon.ico -> 302 al favicon real (sin 404)",
+      r.status_code == 302 and "/static/favicon_A.png" in (r.headers.get("Location") or ""))
+
 print("— fotos —")
 r = C.get("/img/casio_oficial/A158WA-1.jpg")
 check("foto oficial local /img -> 200 image/jpeg",
@@ -304,6 +315,9 @@ with tempfile.TemporaryDirectory() as td:
               for d in _datos))
     check("export: robots.txt permite indexar el catálogo",
           (Path(td) / "robots.txt").read_text(encoding="utf-8").startswith("User-agent"))
+    check("export: favicon.ico en la raíz (lo pide el navegador solo)",
+          (Path(td) / "favicon.ico").is_file()
+          and (Path(td) / "favicon.ico").stat().st_size < 50 * 1024)
     check("export: favicon y logo copiados (carpeta static)",
           (Path(td) / "static" / "favicon_A.png").is_file()
           and (Path(td) / "static" / "logo.PNG").is_file())
