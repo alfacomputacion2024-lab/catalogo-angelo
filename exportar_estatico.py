@@ -5,10 +5,10 @@ Genera la carpeta `sitio_publico/` lista para subir a cualquier hosting
 (Cloudflare Pages, Hostinger, etc.):
 
     sitio_publico/
-      index.html            -> PORTADA liviana (buscador + 6 menús + marcas)
+      index.html            -> PORTADA liviana (buscador + 5 menús con 6 ejemplos + marcas)
       catalogo.html         -> catálogo completo con las tarjetas de productos
-      marcas/<slug>.html    -> UNA página por marca (22), sólo con sus productos
-      tipos/<slug>.html     -> UNA página por tipo de producto (6)
+      marcas/<slug>.html    -> UNA página por marca (20; Armazones y Lentes, ocultas)
+      tipos/<slug>.html     -> UNA página por tipo de producto (5, sólo relojes)
       assets/css/*.css      -> hojas de estilo (base · portada · catálogo)
       assets/js/*.js        -> scripts (tema · comunes · catálogo)
       api/ficha/<id>.json   -> fotos + ficha de cada producto (sin precios)
@@ -62,8 +62,8 @@ def exportar(destino=None, sin_fotos=False, top=0):
     dest.mkdir(parents=True, exist_ok=True)
 
     # 1) Páginas HTML:
-    #    index.html  = PORTADA liviana (buscador + 6 menús con 3 ejemplos + marcas)
-    #    catalogo.html = catálogo completo con las 3.084 tarjetas
+    #    index.html  = PORTADA liviana (buscador + 5 menús con 6 ejemplos + marcas)
+    #    catalogo.html = catálogo completo con las 2.935 tarjetas de reloj
     #    marcas/<slug>.html = UNA página por marca, sólo con sus productos
     #    tipos/<slug>.html  = UNA página por tipo, sólo con los suyos
     with app_mod.app.test_request_context("/"):
@@ -82,6 +82,13 @@ def exportar(destino=None, sin_fotos=False, top=0):
     for s, html in paginas_tipo.items():
         (dest / "tipos").mkdir(exist_ok=True)
         (dest / "tipos" / (s + ".html")).write_text(html, encoding="utf-8")
+    # 1c) Páginas que YA no se generan (marcas ocultas, tipos retirados) se
+    #     borran: si no, quedarían en línea en la web vieja de la carpeta.
+    for carpeta, esperadas in (("marcas", set(paginas_marca)),
+                               ("tipos", set(paginas_tipo))):
+        for viejo in (dest / carpeta).glob("*.html"):
+            if viejo.stem not in esperadas:
+                viejo.unlink()
 
     # 1b) CSS y JS del sitio (la página no lleva ni una línea de estilo ni de
     #     script pegada: todo vive en assets/)

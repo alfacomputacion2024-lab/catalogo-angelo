@@ -28,6 +28,8 @@
   var contador = document.getElementById('contador');
   var vacio = document.getElementById('vacio');
   var pills = [].slice.call(document.querySelectorAll('.pill[data-marca]'));
+  var genPills = [].slice.call(document.querySelectorAll('.pill[data-genero]'));
+  var genChip = document.getElementById('genChip');
   var favNav = document.getElementById('favNav');
   var favN = document.getElementById('favN');
   var migaSep = document.getElementById('migaSep');
@@ -39,6 +41,7 @@
   /* La página viene ya filtrada (marca/tipo) desde el servidor */
   var marca = body.getAttribute('data-marca') || '';
   var tipo = body.getAttribute('data-tipo') || '';
+  var genero = '';      /* '' = todos · 'Hombre' | 'Dama' (se ve "Mujer") | 'Unisex' */
   var soloFavs = false;
 
   /* ----- Tipo de producto: MISMO criterio que _coincide_tipo() de app.py
@@ -47,15 +50,16 @@
     if (!tipo) return true;
     var linea = (c.dataset.linea || '').toLowerCase().replace(/\s+/g, '');
     var gen = (c.dataset.genero || '').toLowerCase();
-    var m = c.dataset.brand || '';
     if (tipo === 'G-Shock') return linea.indexOf('g-shock') >= 0;
     if (tipo === 'Baby-G') return linea.indexOf('baby-g') >= 0;
     if (tipo === 'Edifice') return linea.indexOf('edifice') >= 0;
     if (tipo === 'Pro Trek') return linea.indexOf('protrek') >= 0;
     if (tipo === 'Dama') return gen === 'dama' || linea.indexOf('dama') >= 0;
-    if (tipo === 'Lentes') return m === 'Lentes' || m === 'Armazones';
     return true;
   }
+
+  /* Texto del chip: en la base el género de mujer está guardado como "Dama" */
+  function etiquetaGenero(g) { return g === 'Dama' ? 'Mujer' : g; }
 
   /* ----- Favoritos: guardados en el navegador (sin cuenta, sin servidor) ----- */
   var KF = 'angelo-favs', favs = [];
@@ -108,6 +112,7 @@
       var ok = (!marca || c.dataset.brand === marca)
         && (!q || c.dataset.busqueda.indexOf(q) >= 0)
         && (!soloFavs || favSet[c.dataset.id])
+        && (!genero || (c.dataset.genero || 'Unisex') === genero)
         && coincideTipo(c);
       c.hidden = !ok;
       if (ok) vis++;
@@ -137,16 +142,23 @@
       tipoChip.hidden = !tipo;
       if (tipo) tipoChip.textContent = 'Tipo: ' + tipo + ' ✕';
     }
+    /* Chip para quitar el filtro de género */
+    if (genChip) {
+      genChip.hidden = !genero;
+      if (genero) genChip.textContent = 'Género: ' + etiquetaGenero(genero) + ' ✕';
+    }
     /* Las colecciones solo caben en la vista completa */
-    if (colec) colec.hidden = !(!marca && !q && !soloFavs && !tipo);
+    if (colec) colec.hidden = !(!marca && !q && !soloFavs && !tipo && !genero);
     /* Píldora de marca marcada como activa */
     pills.forEach(function (p) { p.classList.toggle('sel', p.dataset.marca === marca); });
+    genPills.forEach(function (p) { p.classList.toggle('sel', (p.dataset.genero || '') === genero); });
     /* URL compartible (sólo en el catálogo completo) */
     if (PAG === 'total' && window.history && window.history.replaceState) {
       var qs = [];
       if (q) qs.push('q=' + encodeURIComponent(q));
       if (marca) qs.push('marca=' + encodeURIComponent(marca));
       if (tipo) qs.push('tipo=' + encodeURIComponent(tipo));
+      if (genero) qs.push('genero=' + encodeURIComponent(genero));
       try { window.history.replaceState(null, '', RUTA_CATALOGO + (qs.length ? '?' + qs.join('&') : '')); } catch (e) {}
     }
   }
@@ -157,6 +169,14 @@
       if (PAG !== 'total') return;        /* página de marca/tipo: navega normal */
       e.preventDefault();
       marca = a.dataset.marca;
+      aplicar();
+    });
+  });
+  /* ----- Píldoras de género: al instante en TODAS las páginas
+          (no hay página por género: sólo filtra lo que ya se está viendo) ----- */
+  genPills.forEach(function (a) {
+    a.addEventListener('click', function () {
+      genero = a.dataset.genero || '';
       aplicar();
     });
   });
@@ -181,6 +201,8 @@
   }
   /* Chip del tipo: al tocarlo se quita ese filtro */
   if (tipoChip) tipoChip.onclick = function () { tipo = ''; aplicar(); };
+  /* Chip del género: al tocarlo se quita ese filtro */
+  if (genChip) genChip.onclick = function () { genero = ''; aplicar(); };
 
   /* ----- La URL manda filtros: ?q= / ?marca= / ?tipo= / ?abrir= -----
      Se lee ANTES de aplicar(): al filtrar, aplicar() limpia la URL con
@@ -194,6 +216,10 @@
     if (m0 && PAG === 'total') marca = m0;
     var b0 = qs.get('q') || '';
     if (b0 && buscador) buscador.value = b0;
+    var g0 = (qs.get('genero') || '').toLowerCase();
+    if (g0 === 'hombre') genero = 'Hombre';
+    else if (g0 === 'dama' || g0 === 'mujer') genero = 'Dama';
+    else if (g0 === 'unisex') genero = 'Unisex';
     var a0 = qs.get('abrir') || '';
     if (a0 && /^[0-9]+$/.test(a0)) abrirCon = a0;   // enlace directo a un producto
   } catch (e) {}

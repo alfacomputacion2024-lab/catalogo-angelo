@@ -106,12 +106,24 @@ app.jinja_env.filters['short_brand'] = short_brand
 # La marca real por producto (MARCAS_RELOJ, TIENDAS_*, CLAVES_MARCA y
 # watch_brand) vive en marcas.py: módulo compartido con db.py.
 
+# --- Lo que NO se muestra en el catálogo público (08/10/2026, pedido del socio):
+# los armazones y los lentes de la óptica no son relojes. Siguen GUARDADOS en la
+# base (con fotos y fichas) por si algún día se quieren volver a mostrar: basta
+# con vaciar este conjunto. Hasta entonces el sitio es SOLO de relojes.
+MARCAS_OCULTAS = {"Armazones", "Lentes"}
+
+# Filtro de género del catálogo: (valor guardado en la base, texto que se ve).
+# La base guarda "Dama" (así venían las tiendas); al cliente se le muestra "Mujer".
+GENEROS_MOSTRAR = [("Hombre", "Hombre"), ("Dama", "Mujer"), ("Unisex", "Unisex")]
+
 
 def header_pills():
     """Conteo de productos activos agrupados por marca visible (orden desc)."""
     counts = {}
     for p in db.query_products(status="active", parse_specs=False):
         lbl = watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url"))
+        if lbl in MARCAS_OCULTAS:
+            continue
         counts[lbl] = counts.get(lbl, 0) + 1
     return sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
 
@@ -150,6 +162,17 @@ def _entrar_cache(clave, calcular, firmas=None):
     return _CACHE[clave][2]
 
 
+def _genero(p):
+    """Género normalizado del producto para el filtro: Hombre | Dama | Unisex.
+
+    Todo lo que no venga etiquetado se trata como Unisex (así el filtro nunca
+    deja productos huérfanos). 'Dama' es como se guardó la base y como la
+    entiende coincideTipo() de assets/js/catalogo.js; se muestra como "Mujer".
+    """
+    g = (p.get("gender") or "").strip().capitalize()
+    return g if g in ("Hombre", "Dama", "Unisex") else "Unisex"
+
+
 def _client_html(estatico=False, solo_marca=None, solo_tipo=None):
     """HTML del catálogo público: sin sesión ni precios (cacheable tal cual).
 
@@ -169,6 +192,8 @@ def _client_html(estatico=False, solo_marca=None, solo_tipo=None):
     conteo_m = {}          # todas las marcas, aunque la página esté filtrada:
     for p in products:     # las píldoras de arriba siguen mostrando el catálogo
         marca = watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url"))
+        if marca in MARCAS_OCULTAS:
+            continue                      # el catálogo es sólo de relojes
         conteo_m[marca] = conteo_m.get(marca, 0) + 1
         if solo_marca and marca != solo_marca:
             continue
@@ -179,6 +204,12 @@ def _client_html(estatico=False, solo_marca=None, solo_tipo=None):
         items.sort(key=lambda p: ((p.get("name") or "").lower(), p.get("reference") or ""))
     grupos = {m: grupos[m] for m in sorted(grupos)}
     marcas = [m for m, _n in sorted(conteo_m.items())]
+    # Filtro de género (Hombre / Mujer / Unisex): contado sobre lo que esta
+    # página trae, para que los números coincidan con lo que se ve.
+    conteo_g = {"Hombre": 0, "Dama": 0, "Unisex": 0}
+    for items in grupos.values():
+        for p in items:
+            conteo_g[_genero(p)] += 1
     # Tiles de "Colecciones": las 8 marcas con más modelos (sólo en la vista total)
     destacadas = sorted(grupos.items(), key=lambda kv: -len(kv[1]))[:8]
     # Título del navegador distinto en cada página de marca / tipo
@@ -192,20 +223,23 @@ def _client_html(estatico=False, solo_marca=None, solo_tipo=None):
                            destacadas=destacadas, estatico=estatico,
                            pag=pag, pag_titulo=titulo,
                            marca_actual=solo_marca or "", tipo_actual=solo_tipo or "",
+                           # Filtro de género: conteo + etiquetas que se muestran
+                           generos=conteo_g, genero_opciones=GENEROS_MOSTRAR,
+                           genero_total=sum(conteo_g.values()),
                            # Número para el carrito de interés (vacío = botón oculto)
                            whatsapp=os.environ.get("WHATSAPP_NUMERO", "").strip(),
                            theme=json.loads(config.THEME_PATH.read_text(encoding="utf-8")),
                            **_rutas(estatico, marcas))
 
 
-# --- Portada:6 tipos de producto (mixto colección + público, pedido 07/10) ---
+# --- Portada: menús de producto (mixto colección + público, pedido 07/10) ---
+# El 08/10/2026 sacamos "Lentes y armazones": el sitio quedó SOLO de relojes.
 TIPOS_PORTADA = [
     ("G-Shock", "G-Shock"),
     ("Baby-G", "Baby-G"),
     ("Edifice", "Edifice"),
     ("Pro Trek", "Pro Trek"),
     ("Dama", "Dama"),
-    ("Lentes", "Lentes y armazones"),
 ]
 
 
@@ -233,8 +267,6 @@ def _coincide_tipo(p, clave, marca):
         return "protrek" in linea
     if clave == "Dama":
         return gen == "dama" or "dama" in linea
-    if clave == "Lentes":
-        return marca in ("Lentes", "Armazones")
     return False
 
 
@@ -266,8 +298,8 @@ def _rutas(estatico, marcas=None):
     }
 
 
-def _elegir_ejemplos(candidatos, limite=3):
-    """3 modelos de ejemplo (con foto) para el menú de la portada.
+def _elegir_ejemplos(candidatos, limite=6):
+    """6 modelos de ejemplo (con foto) para el menú de la portada.
 
     Prefiere referencias con forma de código de modelo (GA-2100, RB3025…)
     y marcas/líneas variadas, para que la guía muestre distinta gama.
@@ -313,13 +345,15 @@ def _elegir_ejemplos(candidatos, limite=3):
 
 
 def _portada_datos():
-    """(marcas con conteo alfabético, tipos con conteo, 3 ejemplos por tipo)."""
+    """(marcas con conteo alfabético, tipos con conteo, 6 ejemplos por tipo)."""
     products = db.query_products(status="active", parse_specs=False)
     conteo_m = {}
     conteo_t = {clave: 0 for clave, _ in TIPOS_PORTADA}
     candidatos = {clave: [] for clave, _ in TIPOS_PORTADA}
     for p in products:
         marca = watch_brand(p.get("brand"), p.get("line"), p.get("name"), p.get("url"))
+        if marca in MARCAS_OCULTAS:
+            continue                      # la portada es sólo de relojes
         conteo_m[marca] = conteo_m.get(marca, 0) + 1
         for clave, _n in TIPOS_PORTADA:
             if _coincide_tipo(p, clave, marca):
@@ -332,7 +366,7 @@ def _portada_datos():
 
 
 def _portada_html(estatico=False):
-    """Portada liviana: buscador + 6 menús (con 3 ejemplos c/u) + todas las
+    """Portada liviana: buscador + menús (con 6 ejemplos c/u) + todas las
     marcas. SIN listado de productos: la primera página no carga nada pesado."""
     marcas, tipos, ejemplos = _portada_datos()
     return render_template("portada.html", marcas_conteo=marcas, tipos=tipos,

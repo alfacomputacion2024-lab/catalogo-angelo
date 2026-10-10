@@ -67,6 +67,17 @@
       </div>
       <div id="contador" class="contador"></div>
     </div>
+    <!-- Filtro de género: se aplica al instante, combina con marca y búsqueda -->
+    <div class="gen-row">
+      <span class="gen-titulo">Relojes de</span>
+      <div class="pills">
+        <button type="button" class="pill sel" data-genero="">Todos <span>{{ genero_total }}</span></button>
+        {% for clave, etiqueta in genero_opciones %}
+        <button type="button" class="pill" data-genero="{{ clave }}">{{ etiqueta }} <span>{{ generos[clave] }}</span></button>
+        {% endfor %}
+        <button type="button" id="genChip" class="tipo-chip" hidden title="Quitar filtro de género"></button>
+      </div>
+    </div>
   </div>
 </div>
 

@@ -205,16 +205,19 @@ print("— respaldo automático (inerte sin token) —")
 check("respaldo.restaurar() no rompe sin token", respaldo.restaurar() is None)
 check("respaldo.respaldar() no rompe sin token", respaldo.respaldar() is None)
 
-print("— portada en blanco (buscador + 6 menús con ejemplos + marcas) —")
+print("— portada en blanco (buscador + menús con ejemplos + marcas) —")
 _js_catalogo = C.get("/assets/js/catalogo.js").data.decode("utf-8")
 r = C.get("/portada")
 s_port = r.data.decode("utf-8")
 check("/portada -> 200", r.status_code == 200)
 check("/portada NO trae productos (ni fotos ni nombres)",
       'class="card"' not in s_port and 'data-id="' not in s_port)
-check("/portada tiene los 6 tipos de producto", s_port.count('class="tipo-tile"') == 6)
-check("/portada muestra 3 ejemplos por menú (guía de 18)",
-      s_port.count('class="ej"') == 18)
+check("/portada tiene 5 menús de producto (sólo relojes)",
+      s_port.count('class="tipo-tile"') == 5)
+check("/portada no ofrece lentes ni armazones",
+      '/tipo/lentes' not in s_port and 'Armazones' not in s_port)
+check("/portada muestra 6 ejemplos por menú (guía de 30)",
+      s_port.count('class="ej"') == 30)
 n_marcas_port = len(re.findall(r'class="pill" data-marca="', s_port))
 n_marcas_client = html_client.count('class="pill" data-marca="')
 check("/portada lista TODAS las marcas del catálogo",
@@ -247,6 +250,19 @@ check("ninguna página esconde contenido con estilos escritos en el HTML",
       "style=" not in s_port and 'style="display:none"' not in html_client
       and "onerror=" not in html_client)
 
+print("— filtro de género (Relojes de: Todos · Hombre · Mujer · Unisex) —")
+check("/client trae el filtro de género con sus 3 opciones",
+      'data-genero="Hombre"' in html_client and 'data-genero="Dama"' in html_client
+      and 'data-genero="Unisex"' in html_client and 'id="genChip"' in html_client)
+_gen_tarjetas = re.findall(r'data-genero="([^"]*)" data-busqueda', html_client)
+check("TODAS las tarjetas traen género (el filtro no deja agujeros)",
+      len(_gen_tarjetas) > 2000
+      and all(g in ("Hombre", "Dama", "Unisex") for g in _gen_tarjetas))
+check("el filtro de género se lee de la URL (?genero=)",
+      "qs.get('genero')" in _js_catalogo and "genero=" in _js_catalogo)
+check("la base no queda con productos sin género",
+      len(_gen_tarjetas) > 0 and "" not in _gen_tarjetas)
+
 print("— páginas por marca y por tipo (una por pestaña) —")
 r = C.get("/marca/casio")
 s_casio = r.data.decode("utf-8")
@@ -258,6 +274,13 @@ check("/marca/casio titula la página con la marca",
 check("/marca/q-q (Q&Q, carácter raro) -> 200",
       C.get("/marca/q-q").status_code == 200)
 check("/marca inexistente -> 404", C.get("/marca/no-existe").status_code == 404)
+check("/marca/armazones -> 404 (no es reloj, queda oculta)",
+      C.get("/marca/armazones").status_code == 404)
+check("/tipo/lentes -> 404 (no es reloj, queda oculto)",
+      C.get("/tipo/lentes").status_code == 404)
+check("ni la portada ni el catálogo muestran armazones ni lentes",
+      'data-brand="Armazones"' not in html_client and 'data-brand="Lentes"' not in html_client
+      and 'data-brand="Armazones"' not in s_port and 'data-brand="Lentes"' not in s_port)
 _m = re.search(r'href="/tipo/g-shock"[^>]*>.*?<i>([\d.]+) modelos', s_port, re.S)
 _n_gs = int(_m.group(1).replace(".", "")) if _m else -1
 r = C.get("/tipo/g-shock")
@@ -291,8 +314,9 @@ with tempfile.TemporaryDirectory() as td:
           (Path(td) / "marcas" / "casio.html").is_file()
           and (Path(td) / "marcas" / "q-q.html").is_file()
           and (Path(td) / "tipos" / "g-shock.html").is_file()
-          and (Path(td) / "tipos" / "lentes.html").is_file()
-          and resumen["paginas_marca"] >= 20 and resumen["paginas_tipo"] == 6)
+          and (Path(td) / "tipos" / "dama.html").is_file()
+          and not (Path(td) / "tipos" / "lentes.html").exists()
+          and resumen["paginas_marca"] >= 20 and resumen["paginas_tipo"] == 5)
     check("export: la página de una marca sólo trae SUS productos",
           'data-brand="Tissot"' not in
           (Path(td) / "marcas" / "casio.html").read_text(encoding="utf-8"))

@@ -17,6 +17,11 @@
   display:inline-block;text-decoration:none}         /* enlace a la página de la marca */
 .pill:hover{border-color:var(--acc);color:#FFE08A}
 .pill.sel{background:var(--acc);color:#111;font-weight:700}
+.pill span{color:var(--muted);font-size:.72rem;margin-left:.3rem}
+.pill.sel span{color:inherit;opacity:.75}
+/* Filtro de género (Relojes de: Todos · Hombre · Mujer · Unisex) */
+.gen-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.gen-titulo{font-size:.78rem;color:var(--muted);white-space:nowrap}
 .contador{font-size:.78rem;color:var(--muted);white-space:nowrap}
 
 /* --- Miga de pan (Inicio › Catálogo › Marca) --- */
